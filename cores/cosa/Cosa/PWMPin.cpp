@@ -42,9 +42,11 @@ PWMPin::PWMPin(Board::PWMPin pin, uint8_t duty) :
   
   case Board::PWM0:
   case Board::PWM5:
-    // PWM0(2B), PWM5(2A), PWM phase correct, prescale 64
+    // PWM0(2B), PWM5(2A), PWM phase correct, prescale 1
     TCCR2A |= _BV(WGM20);
-    TCCR2B |= _BV(CS22);
+    TCCR2B |= _BV(CS20);      // !! CHANGED TO PRESCALE 1 = FLICKER-FREE !!
+    TCCR2B &= ~(_BV(CS21));
+    TCCR2B &= ~(_BV(CS22));
     break;
   }
   set(duty); 
