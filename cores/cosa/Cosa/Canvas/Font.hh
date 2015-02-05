@@ -3,7 +3,7 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2012-2014, Mikael Patel
+ * Copyright (C) 2012-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,86 +25,61 @@
 #include "Cosa/Canvas.hh"
 
 /*
- * Bitmap font library handler for Cosa Canvas.
+ * Bitmap font library handler.
  */
 class Font {
 public:
   /**
-   * Font size; width/height and character spacing.
+   * Font size; width/height and character/line spacing.
    */
   const uint8_t WIDTH;
   const uint8_t HEIGHT;
   const uint8_t SPACING;
+  uint8_t LINE_SPACING;
 
   /**
-   * Construct font descriptor and bitmap.
+   * Font range.
+   */
+  const uint8_t FIRST;
+  const uint8_t LAST;
+
+  /**
+   * Construct font descriptor.
    * @param[in] width character width.
    * @param[in] height character height.
+   * @param[in] first character available.
+   * @param[in] last character available.
    * @param[in] bitmap font storage.
+   * @param[in] compression_type.
+   * @param[in] spacing recommended character spacing.
+   * @param[in] line_spacing recommended line spacing.
    */
-  Font(uint8_t width, uint8_t height, const uint8_t* bitmap) :
+  Font(uint8_t width, uint8_t height,
+       uint8_t first, uint8_t last,
+       const uint8_t* bitmap,
+       uint8_t compression_type = 0,
+       uint8_t spacing = 1, uint8_t line_spacing = 1) :
     WIDTH(width), 
     HEIGHT(height),
-    SPACING(1),
-    m_bitmap(bitmap)
+    SPACING(spacing),
+    LINE_SPACING(line_spacing),
+    FIRST(first),
+    LAST(last),
+    m_bitmap(bitmap),
+    m_compression_type(compression_type)
   {
-  }
-  
-  /**
-   * @override Font
-   * Get bitmap for given character.
-   * @param[in] c character.
-   * @return bitmap pointer.
-   */
-  virtual const uint8_t* get_bitmap(char c)
-  {
-    return (m_bitmap + (c * WIDTH));
   }
 
   /**
    * @override Font
-   * Get width for given character.
+   * Determine if character is available in font.
    * @param[in] c character.
-   * @return width.
+   * @return true if available.
    */
-  virtual uint8_t get_width(char c)
+  bool available(char c)
+    __attribute__((always_inline))
   {
-    UNUSED(c);
-    return (WIDTH + SPACING);
-  }
-  
-  /**
-   * @override Font
-   * Get width for given string.
-   * @param[in] s string.
-   * @return width.
-   */
-  virtual uint8_t get_width(char* s)
-  {
-    return ((WIDTH + SPACING) * strlen(s));
-  }
-  
-  /**
-   * @override Font
-   * Get width for given string in program memory.
-   * @param[in] s string in program memory.
-   * @return width.
-   */
-  virtual uint8_t get_width_P(const char* s)
-  {
-    return ((WIDTH + SPACING) * strlen_P(s));
-  }
-  
-  /**
-   * @override Font
-   * Get width for given character.
-   * @param[in] c character.
-   * @return height.
-   */
-  virtual uint8_t get_height(char c)
-  {
-    UNUSED(c);
-    return (HEIGHT);
+    return (c >= FIRST && c <= LAST);
   }
 
   /**
@@ -116,15 +91,59 @@ public:
    * @param[in] y position.
    * @param[in] scale.
    */
-  virtual void draw(Canvas* canvas, char c, uint8_t x, uint8_t y, 
-		    uint8_t scale)
-  {
-    canvas->draw_bitmap(x, y, get_bitmap(c), WIDTH, HEIGHT, scale);
-  }
+  virtual void draw(Canvas* canvas, char c, uint16_t x, uint16_t y, 
+                    uint8_t scale);
+
+  /**
+   * Display a character.
+   * Used in the form:
+   *   Font::Glyph glyph(font, character);
+   *   for (uint16_t i = 0; i < HEIGHT; i += 8) {
+   *     for (uint16_t j = 0; j < WIDTH; j++) {
+   *       uint8_t bits = glyph.next();
+   *         // display bits
+   *     }
+   *   }
+   */
+  class Glyph {
+  public:
+    Glyph(Font* font, char c = ' ') :
+      m_font(font),
+      m_char(c)
+    {
+      begin(c);
+    }
+
+    /**
+     * @override Font::Glyph
+     * Begin character.
+     * @param[in] c character.
+     */
+    void begin(char c);
+
+    /**
+     * @override Font::Glyph
+     * Get next byte.
+     * @return byte.
+     */
+    uint8_t next();
+
+  protected:
+    Font* m_font;
+    char m_char;
+    uint8_t m_offset;
+    uint8_t m_flags;
+    uint8_t* m_bitset;  // in progmem
+    uint8_t* m_bitmap;  // in progmem
+    uint8_t m_next;
+  };
 
 protected:
   /** Font bitmap. */
   const uint8_t* m_bitmap;
-};
 
+  /** Compression type. */
+  const uint8_t m_compression_type;
+};
+  
 #endif

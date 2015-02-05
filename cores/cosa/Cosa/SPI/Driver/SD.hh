@@ -304,7 +304,7 @@ protected:
   static const uint8_t INIT_PULSES = 10;
 
   /** Internal number of retry. */
-  static const uint8_t INIT_RETRY = 10;
+  static const uint8_t INIT_RETRY = 20;
   static const uint8_t RESPONSE_RETRY = 100;
 
   /** Response from latest command. */
@@ -387,6 +387,11 @@ public:
    */
 #if defined(BOARD_ATTINYX5)
   SD(Board::DigitalPin csn = Board::D3) :
+    SPI::Driver(csn, SPI::ACTIVE_LOW, SPI::DIV128_CLOCK, 0, SPI::MSB_ORDER, NULL),
+    m_type(TYPE_UNKNOWN)
+  {}
+#elif defined(WICKEDDEVICE_WILDFIRE)
+  SD(Board::DigitalPin csn = Board::D16) :
     SPI::Driver(csn, SPI::ACTIVE_LOW, SPI::DIV128_CLOCK, 0, SPI::MSB_ORDER, NULL),
     m_type(TYPE_UNKNOWN)
   {}

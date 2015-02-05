@@ -852,6 +852,7 @@ ifneq (,$(strip $(LIBS_NOT_FOUND)))
     $(error The following libraries specified in ARDUINO_LIBS could not be found (searched USER_LIB_PATH and ARDUINO_LIB_PATH): $(LIBS_NOT_FOUND))
 endif
 
+SKETCHFLAGS = $(patsubst %,-D%,$(USEFLAGS)) 
 SYS_LIBS := $(wildcard $(SYS_LIBS) $(addsuffix /utility,$(SYS_LIBS)))
 USER_LIBS := $(wildcard $(USER_LIBS) $(addsuffix /utility,$(USER_LIBS)))
 SYS_INCLUDES = $(patsubst %,-I%,$(SYS_LIBS))
@@ -920,7 +921,7 @@ ifeq ($(shell expr $(ARDUINO_VERSION) '<' 157), 1)
 else
   EXTRA_CFLAGS += -Wextra -flto
   EXTRA_LDFLAGS += -w -Wl,-relax -flto
-  EXTRA_CXXFLAGS += -Wextra -flto -std=gnu++11 -felide-constructors
+  EXTRA_CXXFLAGS += -Wextra -flto -std=gnu++11 -felide-constructors -mcall-prologues
 endif
 
 CFLAGS += $(EXTRA_FLAGS) $(EXTRA_CFLAGS)
@@ -1065,7 +1066,7 @@ $(OBJDIR)/%.o: %.pde $(COMMON_DEPS) | $(OBJDIR)
 # .ino to .o file rule
 $(OBJDIR)/%.o: %.ino $(COMMON_DEPS) | $(OBJDIR)
 	@$(MKDIR) $(dir $@)
-	$(CXX) -x c++ -include $(ARDUINO_HEADER) -MMD -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+	$(CXX) -x c++ -include $(ARDUINO_HEADER) -MMD -c $(SKETCHFLAGS) $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 # Generated assembly rule
 $(OBJDIR)/%.s: %.pde $(COMMON_DEPS) | $(OBJDIR)
@@ -1128,6 +1129,10 @@ $(OBJDIR)/%.lss: $(OBJDIR)/%.elf $(COMMON_DEPS)
 $(OBJDIR)/%.sym: $(OBJDIR)/%.elf $(COMMON_DEPS)
 	@$(MKDIR) $(dir $@)
 	$(NM) --size-sort --demangle --reverse-sort --line-numbers $< > $@
+
+$(OBJDIR)/%.map: $(OBJDIR)/%.elf $(COMMON_DEPS)
+	@$(MKDIR) $(dir $@)
+	$(NM) --demangle $< | grep -v ' [aUw] ' | sort > $@
 
 ########################################################################
 # Avrdude
@@ -1342,7 +1347,10 @@ disasm: $(OBJDIR)/$(TARGET).lss
 symbol_sizes: $(OBJDIR)/$(TARGET).sym
 	@$(ECHO) "A symbol listing sorted by their size have been dumped to $(OBJDIR)/$(TARGET).sym\n\n"
 
-verify_size:
+map: $(OBJDIR)/$(TARGET).map
+	@$(ECHO) "A map has been dumped to $(OBJDIR)/$(TARGET).map\n\n"
+
+verify_size: $(TARGET_HEX)
 ifeq ($(strip $(HEX_MAXIMUM_SIZE)),)
 	@$(ECHO) "\nMaximum flash memory of $(BOARD_TAG) is not specified. Make sure the size of $(TARGET_HEX) is less than $(BOARD_TAG)\'s flash memory\n\n"
 else
@@ -1396,6 +1404,7 @@ help:
                       the capacity of the micro controller.\n\
   symbol_sizes      - generate a .sym file containing symbols and their\n\
                       sizes.\n\
+  map               - generate a .map file.\n\
   disasm            - generate a .lss file that contains disassembly\n\
                       of the compiled file with original source code.\n\
   generate_assembly - generate a .s file containing the compiler\n\

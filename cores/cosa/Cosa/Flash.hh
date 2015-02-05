@@ -3,7 +3,7 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2014, Mikael Patel
+ * Copyright (C) 2014-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -30,11 +30,39 @@ public:
    */
   class Device {
   public:
+    /** Size of sector in bytes. */
+    const uint32_t SECTOR_BYTES;
+
+    /** Default size of sector in bytes. */
+    static const uint32_t DEFAULT_SECTOR_BYTES = 4096;
+
+    /** Sector address mask. */
+    const uint32_t SECTOR_MASK;
+
+    /** Number of sectors. */
+    const uint16_t SECTOR_MAX;
+
+    /** Number of bytes of device. */
+    const uint32_t DEVICE_BYTES;
+
+    /**
+     * Construct flash memory device driver with given sector size and
+     * count. 
+     * @param[in] size of sector in bytes.
+     * @param[in] count number of sector.
+     */
+    Device(uint32_t bytes, uint16_t count) :
+      SECTOR_BYTES(bytes),
+      SECTOR_MASK(bytes - 1),
+      SECTOR_MAX(count),
+      DEVICE_BYTES(count * bytes)
+    {}
+
     /**
      * @override Flash::Device
      * Initiate the flash memory device driver. Return true(1) if the
      * successful otherwise false(0).
-     * @return bool
+     * @return bool.
      */
     virtual bool begin() 
     { 
@@ -45,7 +73,7 @@ public:
      * @override Flash::Device
      * Terminate the flash memory device driver. Return true(1) if the
      * successful otherwise false(0).
-     * @return bool
+     * @return bool.
      */
     virtual bool end() 
     { 
@@ -56,7 +84,7 @@ public:
      * @override Flash::Device
      * Return true(1) if the device is ready, write cycle is completed,
      * otherwise false(0).
-     * @return bool
+     * @return bool.
      */
     virtual bool is_ready() = 0;
 
@@ -79,9 +107,10 @@ public:
      * implementation device. Returs zero(0) if successful otherwise
      * an negative error code(-1).
      * @param[in] dest destination block byte address to erase.
+     * @param[in] size of sector to erase in Kbyte.
      * @return zero or negative error code.
      */
-    virtual int erase(uint32_t dest) = 0;
+    virtual int erase(uint32_t dest, uint8_t size) = 0;
 
     /**
      * @override Flash::Device
@@ -100,11 +129,12 @@ public:
      * Write flash block at given destination address with contents
      * of the source buffer in program memory. Return number of bytes
      * written or negative error code.  
-     * @param[in] buf buffer to write.
+     * @param[in] dest address in flash to write to.
+     * @param[in] src buffer in program memory to write to flash.
      * @param[in] size number of bytes to write.
      * @return number of bytes written or EOF(-1).
      */
-    virtual int write_P(uint32_t dest, const void* buf, size_t size) = 0;
+    virtual int write_P(uint32_t dest, const void* scr, size_t size) = 0;
   };
 };
 

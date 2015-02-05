@@ -3,7 +3,7 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2012-2014, Mikael Patel
+ * Copyright (C) 2012-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -72,7 +72,23 @@ const Board::DigitalPin digital_pin_map[] __PROGMEM = {
   Board::D50,
   Board::D51,
   Board::D52,
-  Board::D53
+  Board::D53,
+  Board::D54,
+  Board::D55,
+  Board::D56,
+  Board::D57,
+  Board::D58,
+  Board::D59,
+  Board::D60,
+  Board::D61,
+  Board::D62,
+  Board::D63,
+  Board::D64,
+  Board::D65,
+  Board::D66,
+  Board::D67,
+  Board::D68,
+  Board::D69
 };
 
 const Board::AnalogPin analog_pin_map[] __PROGMEM = {

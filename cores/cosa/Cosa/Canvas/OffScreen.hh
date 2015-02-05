@@ -3,7 +3,7 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2013-2014, Mikael Patel
+ * Copyright (C) 2013-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,18 +26,16 @@
 
 /**
  * Off-screen canvas for drawing before copying to the canvas device.
- * Supports monochrome, 1-bit, pixel in off-screen buffer. 
- * Minimum implementation; draw_pixel() only.
+ * Supports monochrome, 1-bit, pixel in off-screen buffer. Minimum
+ * implementation; draw_pixel() only.
  * @param[in] width of canvas.
  * @param[in] height of canvas.
  */
-template<uint8_t width, uint8_t height>
+template<uint16_t width, uint16_t height>
 class OffScreen : public Canvas {
 public:
   /**
-   * Construct off-screen canvas with given width and height. A 
-   * buffer may be given but must be able to hold the bitmap size.
-   * If the buffer pointer is null a buffer is allocated.
+   * Construct off-screen canvas with given width and height.
    */
   OffScreen() : Canvas(width, height) {}
 
@@ -53,7 +51,7 @@ public:
   /**
    * @override Canvas
    * Start interaction with off-screen canvas.
-   * @return true(1) if successful otherwise false(0)
+   * @return true(1) if successful otherwise false(0).
    */
   virtual bool begin()
   {
@@ -67,7 +65,7 @@ public:
    * @param[in] x.
    * @param[in] y.
    */
-  virtual void draw_pixel(uint8_t x, uint8_t y)
+  virtual void draw_pixel(uint16_t x, uint16_t y)
   {
     if ((x > WIDTH) || (y > HEIGHT)) return;
     uint8_t* bp = &m_bitmap[((y >> 3) * WIDTH) + x];
@@ -90,7 +88,7 @@ public:
   /**
    * @override Canvas
    * Stop sequence of interaction with off-screen device.
-   * @return true(1) if successful otherwise false(0)
+   * @return true(1) if successful otherwise false(0).
    */
   virtual bool end()
   {

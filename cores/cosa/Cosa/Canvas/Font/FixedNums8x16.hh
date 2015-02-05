@@ -21,10 +21,10 @@
 #ifndef COSA_CANVAS_FONT_FIXEDNUMS8X16_HH
 #define COSA_CANVAS_FONT_FIXEDNUMS8X16_HH
 
-#include "Cosa/Canvas/GLCDFont.hh"
+#include "Cosa/Canvas/Font.hh"
 
 /**
- * GLCD bitmap font size 8x16, fixed width font with numbers only.
+ * Bitmap font size 8x16, fixed width font with numbers only.
  *
  * @section Acknowledgements
  * Originates from the GLCD library and adapted for Cosa Canvas. The
@@ -34,29 +34,21 @@
  * https://code.google.com/p/glcd-arduino/source/browse/trunk/glcd/fonts/fixednums8x16.h
  * 
  */
-class FixedNums8x16 : public GLCDFont {
+class FixedNums8x16 : public Font {
 public:
   /**
    * Construct fixed number font singleton.
    */
-  FixedNums8x16() : GLCDFont(8, 15, bitmap) {}
-
-  /**
-   * @overriden Font
-   * Get bitmap for given character. Must be ASCII '+'..'0'..'9'.
-   * Returns pointer to bitmap in program memory.   
-   * @param[in] c character.
-   * @return bitmap pointer.
-   */
-  virtual const uint8_t* get_bitmap(char c)
-  {
-    c = c - '+';
-    if (c > 16) c = 0;
-    return (m_bitmap + (c * WIDTH)*((HEIGHT + 1)/CHARBITS));
-  }
+  FixedNums8x16() :
+    Font(width, height, first, last, bitmap)
+  {}
 
 private:
   static const uint8_t bitmap[] PROGMEM;
+  static const uint8_t width;
+  static const uint8_t height;
+  static const uint8_t first;
+  static const uint8_t last;
 };
 
 extern FixedNums8x16 fixednums8x16;

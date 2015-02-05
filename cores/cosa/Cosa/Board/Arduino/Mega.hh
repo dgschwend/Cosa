@@ -3,7 +3,7 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2012-2014, Mikael Patel
+ * Copyright (C) 2012-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -114,6 +114,11 @@ private:
 
 public:
   /**
+   * Initiate board ports. Default void.
+   */
+  static void init() {}
+
+  /**
    * Digital pin symbols; mapping from name to port<5>:bit<3>.
    */
   enum DigitalPin {
@@ -171,6 +176,22 @@ public:
     D51 = 18,			// PB2/MOSI
     D52 = 17,			// PB1/SCK
     D53 = 16,			// PB0/SS
+    D54 = 56,			// PF0/A0
+    D55 = 57,			// PF1/A1
+    D56 = 58,			// PF2/A2
+    D57 = 59,			// PF3/A3
+    D58 = 60,			// PF4/A4
+    D59 = 61,			// PF5/A5
+    D60 = 62,			// PF6/A6
+    D61 = 63,			// PF7/A7
+    D62 = 64,			// PK0/A8
+    D63 = 65,			// PK1/A9
+    D64 = 66,			// PK2/A10
+    D65 = 67,			// PK3/A11
+    D66 = 68,			// PK4/A12
+    D67 = 69,			// PK5/A13
+    D68 = 70,			// PK6/A14
+    D69 = 71,			// PK7/A15
     LED = D13
   } __attribute__((packed));
 
@@ -266,7 +287,7 @@ public:
    */
   enum {
     ANALOG_PIN_MAX = 16,
-    DIGITAL_PIN_MAX = 54,
+    DIGITAL_PIN_MAX = 70,
     EXT_PIN_MAX = 6,
     PCI_PIN_MAX = 24,
     PWM_PIN_MAX = 13

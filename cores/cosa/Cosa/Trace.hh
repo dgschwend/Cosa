@@ -150,7 +150,7 @@ extern uint8_t trace_log_mask;
 # else
 # define TRACE(expr)							\
     do {								\
-      trace.printf_P(__PSTR("%d:%s:" #expr " = "),			\
+      trace.printf_P(__PSTR("%d:%s:trace:" #expr " = "),		\
 		     __LINE__,						\
 		     __PRETTY_FUNCTION__);				\
       trace.print(expr);						\
@@ -216,7 +216,7 @@ extern uint8_t trace_log_mask;
  */
 # if defined(TRACE_NO_VERBOSE) || defined(BOARD_ATTINY)
 # define MEASURE(msg,cnt)						\
-  trace.get_device()->flush();						\
+  trace.flush();							\
   for (uint32_t __stop, __start = RTC::micros(), __i = 1;		\
        __i != 0;							\
        __i--,								\
@@ -227,7 +227,7 @@ extern uint8_t trace_log_mask;
     for (uint16_t __j = cnt; __j != 0; __j--)
 #else
 # define MEASURE(msg,cnt)						\
-  trace.get_device()->flush();						\
+  trace.flush();							\
   for (uint32_t __stop, __start = RTC::micros(), __i = 1;		\
        __i != 0;							\
        __i--,								\

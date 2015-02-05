@@ -3,7 +3,7 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2012-2014, Mikael Patel
+ * Copyright (C) 2012-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -29,17 +29,17 @@ class System5x7;
 extern System5x7 system5x7;
 
 /**
- * Virtual Canvas device; abstraction of small screens, LCD/TFT. 
+ * Virtual Canvas device; abstraction of small screens, LCD/TFT.
  * Device drivers need to override at least begin(), fill_rect()
- * and end(). See ST7735R for an example of usage.
+ * and end(). See ST7735R and ILI9341 for examples of usage.
  *
  * @section Limitations
- * Color model is 16-bit RGB<5,6,5>. Canvas size is max 256x256.
+ * Color model is 16-bit RGB<5,6,5>. Canvas size is max 64K square.
  *
  * @section Acknowledgements
  * Inspired by GFX graphics library by ladyada/adafruit, the glcd
  * library by Michael Margolis and Bill Perry, and scd library by
- * Sungjune Lee. 
+ * Sungjune Lee.
  */
 class Canvas {
 public:
@@ -53,20 +53,41 @@ public:
       unsigned int green:6;
       unsigned int red:5;
     };
+
+    /**
+     * Construct default color.
+     */
     color16_t()
     {
       rgb = 0;
     }
+
+    /**
+     * Construct color from given 16-bit value.
+     * @param[in] color.
+     */
     color16_t(uint16_t color) 
     {
       rgb = color;
     }
+
+    /**
+     * Construct color from given 8-bit values. Scaled from 8-bit to
+     * 5-bits for blue and red, and 6-bits for green.
+     * @param[in] r.
+     * @param[in] g.
+     * @param[in] b.
+     */
     color16_t(uint8_t r, uint8_t g, uint8_t b) 
     {
       red = r >> 3;
       green = g >> 2;
       blue = b >> 3;
     }
+
+    /**
+     * Cast color to 16-bit unsigned integer.
+     */
     operator uint16_t()
     {
       return (rgb);
@@ -90,28 +111,28 @@ public:
   /**
    * Canvas position<x,y>.
    */
-  struct pos8_t {
-    uint8_t x;
-    uint8_t y;
+  struct pos16_t {
+    uint16_t x;
+    uint16_t y;
   };
 
   /**
    * Rectangle<x, y, width, height> data structure.
    */
-  struct rect8_t {
-    uint8_t x;
-    uint8_t y;
-    uint8_t width;
-    uint8_t height;
+  struct rect16_t {
+    uint16_t x;
+    uint16_t y;
+    uint16_t width;
+    uint16_t height;
   };
 
   /**
    * circle<x, y, radius> data structure.
    */
-  struct circle8_t {
-    uint8_t x;
-    uint8_t y;
-    uint8_t radius;
+  struct circle16_t {
+    uint16_t x;
+    uint16_t y;
+    uint16_t radius;
   };
 
   /**
@@ -147,7 +168,7 @@ public:
 
     /**
      * Set context canvas color. Return previous color.
-     * @param[in] color
+     * @param[in] color.
      * @return previous color.
      */
     color16_t set_canvas_color(color16_t color)
@@ -189,7 +210,7 @@ public:
 
     /**
      * Set context text color. Return previous color.
-     * @param[in] color
+     * @param[in] color.
      * @return previous color.
      */
     color16_t set_text_color(color16_t color)
@@ -209,9 +230,9 @@ public:
 
     /**
      * Set context text font. Return previous color.
-     * @param[in] font
+     * @param[in] font.
      * @return previous font.
-     * @pre font != 0
+     * @pre font != 0.
      */
     Font* set_text_font(Font* font)
     {
@@ -233,7 +254,7 @@ public:
      * Set context text scale (1..n). Return previous text scale.
      * @param[in] scale.
      * @return previous scale.
-     * @pre scale > 0
+     * @pre scale > 0.
      */
     uint8_t set_text_scale(uint8_t scale)
     {
@@ -244,10 +265,10 @@ public:
 
     /**
      * Get context cursor position.
-     * @param[out] x
-     * @param[out] y
+     * @param[out] x.
+     * @param[out] y.
      */
-    void get_cursor(uint8_t& x, uint8_t& y) const
+    void get_cursor(uint16_t& x, uint16_t& y) const
     {
       x = m_cursor.x;
       y = m_cursor.y;
@@ -255,10 +276,10 @@ public:
 
     /**
      * Set context cursor position.
-     * @param[in] x
-     * @param[in] y
+     * @param[in] x.
+     * @param[in] y.
      */
-    void set_cursor(uint8_t x, uint8_t y)
+    void set_cursor(uint16_t x, uint16_t y)
     {
       m_cursor.x = x;
       m_cursor.y = y;
@@ -266,10 +287,10 @@ public:
 
     /**
      * Move context cursor to delta position.
-     * @param[in] dx
-     * @param[in] dy
+     * @param[in] dx.
+     * @param[in] dy.
      */
-    void move_cursor(int8_t dx, int8_t dy)
+    void move_cursor(int16_t dx, int16_t dy)
     {
       m_cursor.x += dx;
       m_cursor.y += dy;
@@ -281,7 +302,7 @@ public:
     color16_t m_text_color;	//!< Current text color.
     uint8_t m_text_scale;	//!< Current text scale.
     Font* m_font;		//!< Current font.
-    pos8_t m_cursor;		//!< Current cursor position.
+    pos16_t m_cursor;		//!< Current cursor position.
   };
 
   /**
@@ -293,8 +314,8 @@ public:
     /**
      * Construct an element with the default context on the given 
      * canvas.
-     * @param[in] canvas
-     * @param[in] font
+     * @param[in] canvas.
+     * @param[in] font.
      */
     Element(Canvas* canvas, Font* font = (Font*) &system5x7) :
       Context(font),
@@ -305,12 +326,48 @@ public:
     Canvas* m_canvas;
   };
   
-public:
   /**
-   * Screen size; width/height and orientation
+   * Canvas image abstract class. Allow implementation of pixel
+   * streams with scanning order from left to right, top to bottom.
+   * May be used from pixel grids, shadings and pictures from file.
    */
-  uint8_t WIDTH;
-  uint8_t HEIGHT;
+  class Image {
+  public:
+    /** Canvas image width. */
+    uint16_t WIDTH; 
+
+    /** Canvas image height. */
+    uint16_t HEIGHT;
+
+    /**
+     * Construct canvas image with given width and height.
+     * @param[in] width.
+     * @param[in] height.
+     */
+    Image(uint16_t width = 0, uint16_t height = 0) :
+      WIDTH(width),
+      HEIGHT(height)
+    {}
+    
+    /**
+     * @override Canvas::Image
+     * Read the given number of pixel into the given buffer.
+     * Return true(1) if successful otherwise false(0).
+     * @param[in] buf pixel buffer pointer.
+     * @param[in] count number of pixels to read.
+     * @return bool.
+     */
+    virtual bool read(color16_t* buf, size_t count) = 0;
+
+    /** Buffer size. */
+    static const size_t BUFFER_MAX = 32;
+  };
+
+  /**
+   * Screen size; width/height and orientation.
+   */
+  uint16_t WIDTH;
+  uint16_t HEIGHT;
   enum {
     PORTRAIT = 0,
     LANDSCAPE = 1,
@@ -322,7 +379,7 @@ public:
    * @param[in] height screen height.
    * @param[in] context canvas state.
    */
-  Canvas(uint8_t width, uint8_t height, Context* context = &Canvas::context) :
+  Canvas(uint16_t width, uint16_t height, Context* context = &Canvas::context) :
     WIDTH(width),
     HEIGHT(height),
     m_context(context),
@@ -333,7 +390,7 @@ public:
   /**
    * @override Canvas
    * Start interaction with device. Must override.
-   * @return true(1) if successful otherwise false(0)
+   * @return true(1) if successful otherwise false(0).
    */
   virtual bool begin() = 0;
 
@@ -369,7 +426,7 @@ public:
 
   /**
    * Set current canvas color. Return previous color.
-   * @param[in] color
+   * @param[in] color.
    * @return previous color.
    */
   color16_t set_canvas_color(color16_t color)
@@ -388,7 +445,7 @@ public:
 
   /**
    * Set current drawing color. Return previous color.
-   * @param[in] color
+   * @param[in] color.
    * @return previous color.
    */
   color16_t set_pen_color(color16_t color)
@@ -407,7 +464,7 @@ public:
 
   /**
    * Set current text color. Return previous color.
-   * @param[in] color
+   * @param[in] color.
    * @return previous color.
    */
   color16_t set_text_color(color16_t color)
@@ -425,7 +482,7 @@ public:
 
   /**
    * Set current text font. Return previous font.
-   * @param[in] font
+   * @param[in] font.
    * @return previous font.
    */
   Font* set_text_font(Font* font)
@@ -454,39 +511,39 @@ public:
 
   /**
    * Get current cursor position.
-   * @param[out] x
-   * @param[out] y
+   * @param[out] x.
+   * @param[out] y.
    */
-  void get_cursor(uint8_t& x, uint8_t& y) const
+  void get_cursor(uint16_t& x, uint16_t& y) const
   {
     m_context->get_cursor(x, y);
   }
 
   /**
    * Set current cursor position.
-   * @param[in] x
-   * @param[in] y
+   * @param[in] x.
+   * @param[in] y.
    */
-  void set_cursor(uint8_t x, uint8_t y)
+  void set_cursor(uint16_t x, uint16_t y)
   {
     m_context->set_cursor(x, y);
   }
 
   /**
    * Move current cursor to delta position.
-   * @param[in] dx
-   * @param[in] dy
+   * @param[in] dx.
+   * @param[in] dy.
    */
-  void move_cursor(int8_t dx, int8_t dy)
+  void move_cursor(int16_t dx, int16_t dy)
   {
     m_context->move_cursor(dx, dy);
   }
 
   /**
    * Create 16-bit color from primary colors (RGB).
-   * @param[in] red
-   * @param[in] green
-   * @param[in] blue
+   * @param[in] red.
+   * @param[in] green.
+   * @param[in] blue.
    * @return color.
    */
   color16_t color(uint8_t red, uint8_t green, uint8_t blue)
@@ -495,17 +552,17 @@ public:
   }
 
   /**
-   * Create color shade (0..100%)
-   * @param[in] color
-   * @param[in] scale
+   * Create color shade (0..100%).
+   * @param[in] color.
+   * @param[in] scale.
    * @return color shade.
    */
   static color16_t shade(color16_t color, uint8_t scale);
 
   /**
    * Blend the two colors.
-   * @param[in] c1
-   * @param[in] c2
+   * @param[in] c1.
+   * @param[in] c2.
    * @return color blend.
    */
   static color16_t blend(color16_t c1, color16_t c2);
@@ -513,14 +570,14 @@ public:
   /**
    * @override Canvas
    * Get screen orientation.
-   * @return direction (Canvas::LANDSCAPE/PORTRAIT)
+   * @return direction (Canvas::LANDSCAPE/PORTRAIT).
    */
   virtual uint8_t get_orientation();
 
   /**
    * @override Canvas
    * Set screen orientation. Return previous orientation.
-   * @param[in] direction (Canvas::LANDSCAPE/PORTRAIT)
+   * @param[in] direction (Canvas::LANDSCAPE/PORTRAIT).
    * @return previous orientation.
    */
   virtual uint8_t set_orientation(uint8_t direction);
@@ -531,14 +588,14 @@ public:
    * @param[in] x.
    * @param[in] y.
    */
-  virtual void draw_pixel(uint8_t x, uint8_t y);
+  virtual void draw_pixel(uint16_t x, uint16_t y);
   
   /**
    * Set pixel at cursor position with current pen color.
    */
   void draw_pixel()
   {
-    uint8_t x, y;
+    uint16_t x, y;
     get_cursor(x, y);
     draw_pixel(x, y);
   }
@@ -554,8 +611,8 @@ public:
    * @param[in] height.
    * @param[in] scale.
    */
-  virtual void draw_bitmap(uint8_t x, uint8_t y, const uint8_t* bp, 
-			   uint8_t width, uint8_t height, 
+  virtual void draw_bitmap(uint16_t x, uint16_t y, const uint8_t* bp, 
+			   uint16_t width, uint16_t height, 
 			   uint8_t scale = 1);
 
   /**
@@ -567,10 +624,10 @@ public:
    * @param[in] scale.
    */
   void draw_bitmap(const uint8_t* bp, 
-		   uint8_t width, uint8_t height,
+		   uint16_t width, uint16_t height,
 		   uint8_t scale = 1)
   {
-    uint8_t x, y;
+    uint16_t x, y;
     get_cursor(x, y);
     draw_bitmap(x, y, bp, width, height, scale);
   }
@@ -586,8 +643,8 @@ public:
    * @param[in] height.
    * @param[in] scale.
    */
-  virtual void draw_icon(uint8_t x, uint8_t y, const uint8_t* bp,
-			 uint8_t width, uint8_t height,
+  virtual void draw_icon(uint16_t x, uint16_t y, const uint8_t* bp,
+			 uint16_t width, uint16_t height,
 			 uint8_t scale = 1);
 
   /**
@@ -599,7 +656,7 @@ public:
    * @param[in] bp.
    * @param[in] scale.
    */
-  virtual void draw_icon(uint8_t x, uint8_t y, const uint8_t* bp, 
+  virtual void draw_icon(uint16_t x, uint16_t y, const uint8_t* bp, 
 			 uint8_t scale = 1);
 
   /**
@@ -610,22 +667,43 @@ public:
    */
   void draw_icon(const uint8_t* bp, uint8_t scale = 1)
   {
-    uint8_t width = pgm_read_byte(bp++);
-    uint8_t height = pgm_read_byte(bp++);
-    uint8_t x, y;
+    uint16_t width = pgm_read_byte(bp++);
+    uint16_t height = pgm_read_byte(bp++);
+    uint16_t x, y;
     get_cursor(x, y);
     draw_icon(x, y, bp, width, height, scale);
   }
   
   /**
    * @override Canvas
+   * Draw image on canvas at given position. 
+   * @param[in] x.
+   * @param[in] y.
+   * @param[in] image.
+   */
+  virtual void draw_image(uint16_t x, uint16_t y, Image* image);
+
+  /**
+   * @override Canvas
+   * Draw image on canvas at current position. 
+   * @param[in] image.
+   */
+  virtual void draw_image(Image* image)
+  {
+    uint16_t x, y;
+    get_cursor(x, y);
+    draw_image(x, y, image);
+  }
+
+  /**
+   * @override Canvas
    * Draw line with current pen color.
-   * @param[in] x0. 
+   * @param[in] x0.
    * @param[in] y0.
    * @param[in] x1.
    * @param[in] y1.
    */
-  virtual void draw_line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1);
+  virtual void draw_line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
 
   /**
    * Draw line to given position with current color. Update cursor to
@@ -633,9 +711,9 @@ public:
    * @param[in] x1.
    * @param[in] y1.
    */
-  void draw_line(uint8_t x1, uint8_t y1)
+  void draw_line(uint16_t x1, uint16_t y1)
   {
-    uint8_t x0, y0;
+    uint16_t x0, y0;
     get_cursor(x0, y0);
     draw_line(x0, y0, x1, y1);
     set_cursor(x1, y1);
@@ -648,16 +726,16 @@ public:
    * @param[in] y.
    * @param[in] length.
    */
-  virtual void draw_vertical_line(uint8_t x, uint8_t y, uint8_t length);
+  virtual void draw_vertical_line(uint16_t x, uint16_t y, uint16_t length);
 
   /**
    * Draw vertical line with given length and current pen color. Update
    * cursor to new position.
    * @param[in] length.
    */
-  void draw_vertical_line(uint8_t length)
+  void draw_vertical_line(uint16_t length)
   {
-    uint8_t x, y;
+    uint16_t x, y;
     get_cursor(x, y);
     draw_line(x, y + length);
   }
@@ -669,16 +747,16 @@ public:
    * @param[in] y.
    * @param[in] length.
    */
-  virtual void draw_horizontal_line(uint8_t x, uint8_t y, uint8_t length);
+  virtual void draw_horizontal_line(uint16_t x, uint16_t y, uint16_t length);
 
   /**
    * Draw horizontal line with given length and current pen color. Update
    * cursor to new position.
    * @param[in] length.
    */
-  void draw_horizontal_line(uint8_t length)
+  void draw_horizontal_line(uint16_t length)
   {
-    uint8_t x, y;
+    uint16_t x, y;
     get_cursor(x, y);
     draw_line(x + length, y);
   }
@@ -697,7 +775,7 @@ public:
    * Draw stroke from program memory with current pen color. Vector of 
    * delta positions, terminated with 0, 0. The cursor is moved for
    * when both dx and dy are zero or negative. Update cursor to new
-   * position. 
+   * position.
    * @param[in] stroke.
    * @param[in] scale.
    */
@@ -711,16 +789,16 @@ public:
    * @param[in] width.
    * @param[in] height.
    */
-  virtual void draw_rect(uint8_t x, uint8_t y, uint8_t width, uint8_t height);
+  virtual void draw_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height);
 
   /**
    * Draw rectangle at cursor position with current pen color.
    * @param[in] width.
    * @param[in] height.
    */
-  void draw_rect(uint8_t width, uint8_t height)
+  void draw_rect(uint16_t width, uint16_t height)
   {
-    uint8_t x, y;
+    uint16_t x, y;
     get_cursor(x, y);
     draw_rect(x, y, width, height);
   }
@@ -733,16 +811,16 @@ public:
    * @param[in] width.
    * @param[in] height.
    */
-  virtual void fill_rect(uint8_t x, uint8_t y, uint8_t width, uint8_t height);
+  virtual void fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height);
 
   /**
    * Fill rectangle at cursor position with current pen color.
    * @param[in] width.
    * @param[in] height.
    */
-  void fill_rect(uint8_t width, uint8_t height)
+  void fill_rect(uint16_t width, uint16_t height)
   {
-    uint8_t x, y;
+    uint16_t x, y;
     get_cursor(x, y);
     fill_rect(x, y, width, height);
   }
@@ -756,9 +834,9 @@ public:
    * @param[in] height.
    * @param[in] radius.
    */
-  virtual void draw_roundrect(uint8_t x, uint8_t y, 
-			      uint8_t width, uint8_t height,
-			      uint8_t radius);
+  virtual void draw_roundrect(uint16_t x, uint16_t y, 
+			      uint16_t width, uint16_t height,
+			      uint16_t radius);
 
   /**
    * Draw round corner rectangle at cursor position with current pen color.
@@ -766,25 +844,25 @@ public:
    * @param[in] height.
    * @param[in] radius.
    */
-  void draw_roundrect(uint8_t width, uint8_t height, uint8_t radius)
+  void draw_roundrect(uint16_t width, uint16_t height, uint16_t radius)
   {
-    uint8_t x, y;
+    uint16_t x, y;
     get_cursor(x, y);
     draw_roundrect(x, y, width, height, radius);
   }
 
   /**
    * @override Canvas
-   * Fill round corner rectangle with current pen color. 
+   * Fill round corner rectangle with current pen color.
    * @param[in] x.
    * @param[in] y.
    * @param[in] width.
    * @param[in] height.
    * @param[in] radius.
    */
-  virtual void fill_roundrect(uint8_t x, uint8_t y, 
-			      uint8_t width, uint8_t height,
-			      uint8_t radius);
+  virtual void fill_roundrect(uint16_t x, uint16_t y, 
+			      uint16_t width, uint16_t height,
+			      uint16_t radius);
 
   /**
    * Fill round corner rectangle at cursor position with current pen color.
@@ -792,9 +870,9 @@ public:
    * @param[in] height.
    * @param[in] radius.
    */
-  void fill_roundrect(uint8_t width, uint8_t height, uint8_t radius)
+  void fill_roundrect(uint16_t width, uint16_t height, uint16_t radius)
   {
-    uint8_t x, y;
+    uint16_t x, y;
     get_cursor(x, y);
     fill_roundrect(x, y, width, height, radius);
   }
@@ -806,15 +884,15 @@ public:
    * @param[in] y.
    * @param[in] radius.
    */
-  virtual void draw_circle(uint8_t x, uint8_t y, uint8_t radius);
+  virtual void draw_circle(uint16_t x, uint16_t y, uint16_t radius);
 
   /**
    * Draw circle at cursor position with current pen color.
    * @param[in] radius.
    */
-  void draw_circle(uint8_t radius)
+  void draw_circle(uint16_t radius)
   {
-    uint8_t x, y;
+    uint16_t x, y;
     get_cursor(x, y);
     draw_circle(x, y, radius);
   }
@@ -826,15 +904,15 @@ public:
    * @param[in] y.
    * @param[in] radius.
    */
-  virtual void fill_circle(uint8_t x, uint8_t y, uint8_t radius);
+  virtual void fill_circle(uint16_t x, uint16_t y, uint16_t radius);
 
   /**
    * Fill circle at cursor position with current pen color.
    * @param[in] radius.
    */
-  void fill_circle(uint8_t radius)
+  void fill_circle(uint16_t radius)
   {
-    uint8_t x, y;
+    uint16_t x, y;
     get_cursor(x, y);
     fill_circle(x, y, radius);
   }
@@ -846,7 +924,7 @@ public:
    * @param[in] y position.
    * @param[in] c character.
    */
-  virtual void draw_char(uint8_t x, uint8_t y, char c);
+  virtual void draw_char(uint16_t x, uint16_t y, char c);
 
   /**
    * Draw character with current text color, font and scale.
@@ -854,7 +932,7 @@ public:
    */
   void draw_char(char c)
   {
-    uint8_t x, y;
+    uint16_t x, y;
     get_cursor(x, y);
     draw_char(x, y, c);
   }
@@ -882,7 +960,7 @@ public:
   /**
    * @override Canvas
    * Stop sequence of interaction with device. Must override.
-   * @return true(1) if successful otherwise false(0)
+   * @return true(1) if successful otherwise false(0).
    */
   virtual bool end() = 0;
 

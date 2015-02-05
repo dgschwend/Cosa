@@ -3,7 +3,7 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2012-2013, Mikael Patel
+ * Copyright (C) 2012-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -50,13 +50,24 @@
 #include "Cosa/Watchdog.hh"
 #include "Cosa/Driver/HCSR04.hh"
 #include "Cosa/IOStream.hh"
-#include "Cosa/Canvas/Driver/ST7735.hh"
 #include "Cosa/Canvas/Element/Textbox.hh"
 #include "Cosa/Canvas/Font/System5x7.hh"
 #include "Cosa/Canvas/Font/Segment32x50.hh"
 #include "Cosa/Canvas/Icon/arduino_icon_96x32.h"
 
+#define USE_TFT_ST7735
+//#define USE_TFT_ILI9341
+
+#if defined(USE_TFT_ST7735)
+#include "Cosa/Canvas/Driver/ST7735.hh"
 ST7735 tft;
+#endif
+
+#if defined(USE_TFT_ILI9341)
+#include "Cosa/Canvas/Driver/ILI9341.hh"
+ILI9341 tft;
+#endif
+
 Textbox textbox(&tft);
 IOStream cout(&textbox);
 
@@ -82,13 +93,13 @@ Ping::on_change(uint16_t distance)
     else if (distance < 600) color = Canvas::RED;
     else                     color = Canvas::BLACK;
     uint8_t digits = (distance < 100 ? 2 : (distance < 1000 ? 3 : 4));
-    uint16_t width = segment32x50.get_width('0') * digits;
+    uint16_t width = (segment32x50.WIDTH + system5x7.SPACING) * digits;
     textbox.set_text_color(color);
     textbox.set_cursor((tft.WIDTH - width)/2, (tft.HEIGHT - 50)/2);
     cout << distance;
   }
   else {
-    uint16_t width = system5x7.get_width(' ') * 18;
+    uint16_t width = (system5x7.WIDTH + system5x7.SPACING) * 18;
     tft.draw_icon((tft.WIDTH - 96)/2, (tft.HEIGHT - 50)/2, arduino_icon_96x32);
     tft.set_cursor((tft.WIDTH - width)/2, 80);
     tft.draw_string_P(PSTR("Cosa Canvas HCSR04"));

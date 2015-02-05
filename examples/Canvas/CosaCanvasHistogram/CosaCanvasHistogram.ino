@@ -3,7 +3,7 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2012-2014, Mikael Patel
+ * Copyright (C) 2012-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -51,11 +51,21 @@
 #include "Cosa/AnalogPin.hh"
 #include "Cosa/Watchdog.hh"
 #include "Cosa/IOStream.hh"
-#include "Cosa/Canvas/Driver/ST7735.hh"
 #include "Cosa/Canvas/Element/Textbox.hh"
 
-// The display and an iostream to the device
+#define USE_TFT_ST7735
+//#define USE_TFT_ILI9341
+
+#if defined(USE_TFT_ST7735)
+#include "Cosa/Canvas/Driver/ST7735.hh"
 ST7735 tft;
+#endif
+
+#if defined(USE_TFT_ILI9341)
+#include "Cosa/Canvas/Driver/ILI9341.hh"
+ILI9341 tft;
+#endif
+
 Textbox textbox(&tft);
 IOStream cout(&textbox);
 Canvas::color16_t CANVAS, PEN;
@@ -84,10 +94,10 @@ void loop()
   for (uint8_t ix = 0; ix < ANALOG_PIN_MAX; ix++) {
     static uint16_t sample[ANALOG_PIN_MAX];
     if (sample[ix] < 20) sample[ix] = 20;
-    uint8_t x = 6 + (25*ix);
-    uint8_t y = tft.HEIGHT - sample[ix];
-    uint8_t width = 20;
-    uint8_t height = sample[ix];
+    uint16_t x = 6 + (25*ix);
+    uint16_t y = tft.HEIGHT - sample[ix];
+    uint16_t width = 20;
+    uint16_t height = sample[ix];
 
     // Erase the old bar and text
     tft.set_pen_color(CANVAS);

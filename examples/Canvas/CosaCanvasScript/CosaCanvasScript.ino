@@ -3,7 +3,7 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2012-2014, Mikael Patel
+ * Copyright (C) 2012-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -46,10 +46,19 @@
 #include "Cosa/Canvas/Icon/arduino_icon_34x32.h"
 #include "Cosa/Canvas/Font/System5x7.hh"
 #include "Cosa/Canvas/Font/FixedNums8x16.hh"
-#include "Cosa/Canvas/Driver/ST7735.hh"
 
-// Use the TFT display as canvas
+#define USE_TFT_ST7735
+//#define USE_TFT_ILI9341
+
+#if defined(USE_TFT_ST7735)
+#include "Cosa/Canvas/Driver/ST7735.hh"
 ST7735 tft;
+#endif
+
+#if defined(USE_TFT_ILI9341)
+#include "Cosa/Canvas/Driver/ILI9341.hh"
+ILI9341 tft;
+#endif
 
 // An init-script: Draw arduino icon and canvas script banner
 CANVAS_BEGIN_SCRIPT(init_script)

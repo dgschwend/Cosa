@@ -3,7 +3,7 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2012-2014, Mikael Patel
+ * Copyright (C) 2012-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,12 +26,14 @@
 #include "Cosa/Canvas.hh"
 #include "Cosa/Canvas/Font.hh"
 
+extern System5x7 system5x7;
+
 /**
- * Canvas Textbox element. Acts as an IOStream/console output to
- * Canvas. As an element it holds its own canvas state; context. The
- * textbox is defined by a port (x, y, width, height) on the
- * canvas. Basic special character handling of carriage-return, line-
- * and form-feed. 
+ * Canvas Textbox element. Acts as an IOStream/console output to a
+ * canvas. As an element it holds its own canvas state; context. The
+ * textbox is defined by a port (x, y, width, height) on the canvas.
+ * Basic special character handling of carriage-return, line- and
+ * form-feed. 
  */
 class Textbox : public Canvas::Element, public IOStream::Device {
 public:
@@ -39,22 +41,21 @@ public:
    * Construct text box on given canvas. Set textbox port to canvas size.
    * @param[in] canvas.
    */
-  Textbox(Canvas* canvas) :
-    Canvas::Element(canvas),
-    IOStream::Device(),
-    m_line_spacing(2)
+  Textbox(Canvas* canvas, Font* font = (Font*) &system5x7) :
+    Canvas::Element(canvas, font),
+    IOStream::Device()
   {
     set_text_port(0, 0, canvas->WIDTH, canvas->HEIGHT);
   }
 
   /**
    * Get current text port.
-   * @param[out] x
-   * @param[out] y
-   * @param[out] width
-   * @param[out] height
+   * @param[out] x.
+   * @param[out] y.
+   * @param[out] width.
+   * @param[out] height.
    */
-  void get_text_port(uint8_t& x, uint8_t& y, uint8_t& width, uint8_t& height)
+  void get_text_port(uint16_t& x, uint16_t& y, uint16_t& width, uint16_t& height)
   {
     x = m_text_port.x;
     y = m_text_port.y;
@@ -64,12 +65,12 @@ public:
 
   /**
    * Set current text position.
-   * @param[in] x
-   * @param[in] y
-   * @param[in] width
-   * @param[in] height
+   * @param[in] x.
+   * @param[in] y.
+   * @param[in] width.
+   * @param[in] height.
    */
-  void set_text_port(uint8_t x, uint8_t y, uint8_t width, uint8_t height)
+  void set_text_port(uint16_t x, uint16_t y, uint16_t width, uint16_t height)
   {
     m_text_port.x = x;
     m_text_port.y = y;
@@ -84,7 +85,7 @@ public:
    */
   uint8_t get_line_spacing()
   {
-    return (m_line_spacing);
+    return (m_canvas->get_context()->get_text_font()->LINE_SPACING);
   }
 
   /**
@@ -93,7 +94,7 @@ public:
    */
   void set_line_spacing(uint8_t spacing)
   {
-    m_line_spacing = spacing;
+    m_canvas->get_context()->get_text_font()->LINE_SPACING = spacing;
   }
 
   /**
@@ -108,10 +109,7 @@ public:
 
 protected:
   /** Textbox port rectangle. */
-  Canvas::rect8_t m_text_port;
-
-  /** Line spacing. Character spacing is defined by the font setting. */
-  uint8_t m_line_spacing;
+  Canvas::rect16_t m_text_port;
 };
 
 #endif

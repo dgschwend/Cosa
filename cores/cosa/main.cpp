@@ -3,7 +3,7 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2013-2014, Mikael Patel
+ * Copyright (C) 2013-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -66,6 +66,10 @@ void init()
   UDIEN = 0;
 #endif
 
+  // Allow the board to set ports in a safe state. Typically chip
+  // select pins to board devices
+  Board::init();
+
   // Allow interrupts from here on
   sei();
 }
@@ -74,13 +78,18 @@ void init()
  * Default setup function. This function may be overridden.
  */
 void setup() __attribute__((weak));
-void setup() {}
+void setup() 
+{
+}
 
 /**
  * Default loop function. This function may be overridden.
  */
 void loop() __attribute__((weak));
-void loop() { exit(0); }
+void loop() 
+{ 
+  exit(0); 
+}
 
 /**
  * The main function. This function may be overridden.
@@ -95,7 +104,7 @@ int main(void)
 }
 
 /**
- * Default delay function; delay given number of milli-seconds.
+ * Default delay function; busy-wait given number of milli-seconds.
  * @param[in] ms milli-seconds delay.
  */
 static void default_delay(uint32_t ms) 
@@ -113,14 +122,15 @@ static void default_sleep(uint16_t s)
 }
 
 /**
- * Default yield function; enter sleep mode and wait for interrupt.
+ * Default yield function; enter sleep mode and wait for 
+ * any interrupt.
  */
 static void default_yield() 
 { 
   Power::sleep(); 
 }
 
-/** Default setting of multi-tasking functions */
+/* Default setting of multi-tasking functions */
 void (*delay)(uint32_t ms) = default_delay;
 void (*sleep)(uint16_t s) = default_sleep;
 void (*yield)() = default_yield;

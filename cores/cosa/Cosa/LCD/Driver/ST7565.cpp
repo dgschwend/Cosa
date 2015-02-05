@@ -250,7 +250,7 @@ ST7565::putchar(char c)
 
     // Check for special character: horizontal tab
     if (c == '\t') {
-      uint8_t tab = m_tab * m_font->get_width(' ');
+      uint8_t tab = m_tab * (m_font->WIDTH + m_font->SPACING);
       uint8_t x = m_x + tab - (m_x % tab);
       uint8_t y = m_y + (x >= WIDTH);
       set_cursor(x, y);
@@ -265,7 +265,7 @@ ST7565::putchar(char c)
 
     // Check for special character: back-space
     if (c == '\b') {
-      uint8_t width = m_font->get_width(' ');
+      uint8_t width = m_font->WIDTH + m_font->SPACING;
       if (m_x < width) width = m_x;
       set_cursor(m_x - width, m_y);
       return (c);
@@ -279,8 +279,8 @@ ST7565::putchar(char c)
   }
 
   // Write character to the display with an extra space
-  uint8_t width = m_font->get_width(c);
-  const uint8_t* bp = m_font->get_bitmap(c);
+  uint8_t width = m_font->WIDTH + m_font->SPACING;
+  Font::Glyph glyph(m_font, c);
   m_x += width;
   if (m_x > WIDTH) {
     putchar('\n');
@@ -288,7 +288,7 @@ ST7565::putchar(char c)
   }
   m_io->begin();
   while (--width) 
-    m_io->write(m_mode ^ pgm_read_byte(bp++));
+    m_io->write(m_mode ^ glyph.next());
   m_io->write(m_mode);
   m_io->end();
 

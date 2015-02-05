@@ -3,7 +3,7 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2012-2014, Mikael Patel
+ * Copyright (C) 2012-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -59,65 +59,86 @@ Canvas::set_orientation(uint8_t direction)
 }
 
 void 
-Canvas::draw_pixel(uint8_t x, uint8_t y)
+Canvas::draw_pixel(uint16_t x, uint16_t y)
 {
   fill_rect(x, y, 1, 1);
 }
 
 void
-Canvas::draw_bitmap(uint8_t x, uint8_t y, const uint8_t* bp, 
-		    uint8_t width, uint8_t height,
+Canvas::draw_bitmap(uint16_t x, uint16_t y, const uint8_t* bp, 
+		    uint16_t width, uint16_t height,
 		    uint8_t scale)
 {
-  for (uint8_t i = 0; i < width; i++) {
-    uint8_t line = 0;
-    for (uint8_t j = 0; j < height; j++) {
-      if ((j & 0x7) == 0)
-	line = pgm_read_byte(bp++);
-      if (line & 0x1) {
-	if (scale == 1)
-	  draw_pixel(x + i, y + j);
+  if (scale == 1) {
+    for (uint16_t i = 0; i < height; i += 8) {
+      for (uint16_t j = 0; j < width; j++) {
+	uint8_t bits = pgm_read_byte(bp++);
+	if (bits == 0xff) {
+	  draw_vertical_line(x + j, y + i, CHARBITS);
+	}
 	else {
-	  fill_rect(x + i*scale, y + j*scale, scale, scale);
-	} 
+	  for (uint8_t k = 0; k < 8; k++) {
+	    if (bits == 0) break;
+	    if (bits & 1) draw_pixel(x + j, y + k + i);
+	    bits >>= 1;
+	  }
+	}
       }
-      line >>= 1;
+    }
+  }
+  else {
+    for (uint16_t i = 0; i < height; i += 8) {
+      for (uint16_t j = 0; j < width; j++) {
+	uint8_t bits = pgm_read_byte(bp++);
+	for (uint8_t k = 0; k < 8; k++) {
+	  if (bits == 0) break;
+	  if (bits & 1) fill_rect(x + j*scale, y + (k+i)*scale, scale, scale);
+	  bits >>= 1;
+	}
+      }
     }
   }
 }
 
 void
-Canvas::draw_icon(uint8_t x, uint8_t y, const uint8_t* bp,
-		  uint8_t width, uint8_t height,
+Canvas::draw_icon(uint16_t x, uint16_t y, const uint8_t* bp,
+		  uint16_t width, uint16_t height,
 		  uint8_t scale)
 {
-  for (uint8_t i = 0; i < height; i += 8) {
-    for (uint8_t j = 0; j < width; j++) {
-      uint8_t line = pgm_read_byte(bp++);
-      for (uint8_t k = 0; k < 8; k++) {
-	if (line & 1) {
-	  if (scale == 1)
-	    draw_pixel(x + j, y + k + i);
-	  else {
-	    fill_rect(x + j*scale, y + (k+i)*scale, scale, scale);
-	  } 
-	}
-	line >>= 1;
-      }
-    }
-  }
+  draw_bitmap(x, y, bp, width, height, scale);
 }
 
 void 
-Canvas::draw_icon(uint8_t x, uint8_t y, const uint8_t* bp, uint8_t scale)
+Canvas::draw_icon(uint16_t x, uint16_t y, const uint8_t* bp, uint8_t scale)
 {
-  uint8_t width = pgm_read_byte(bp++);
-  uint8_t height = pgm_read_byte(bp++);
+  uint16_t width = pgm_read_byte(bp++);
+  uint16_t height = pgm_read_byte(bp++);
   draw_icon(x, y, bp, width, height, scale);
 }
 
+void 
+Canvas::draw_image(uint16_t x, uint16_t y, Image* image)
+{
+  color16_t saved = set_pen_color(0);
+  uint16_t width = image->WIDTH;
+  uint16_t height = image->HEIGHT;
+  for (uint16_t i = 0; i < height; i++) {
+    color16_t buf[Image::BUFFER_MAX];
+    size_t count;
+    for (uint16_t j = 0; j < width; j += count) {
+      count = (width - j > Image::BUFFER_MAX) ? Image::BUFFER_MAX : width - j;
+      image->read(buf, Image::BUFFER_MAX);
+      for (uint8_t k = 0; k < count; k++) {
+	set_pen_color(buf[k]);
+	draw_pixel(x + j, y + i);
+      }
+    }
+  }
+  set_pen_color(saved);
+}
+
 void
-Canvas::draw_rect(uint8_t x, uint8_t y, uint8_t width, uint8_t height)
+Canvas::draw_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height)
 {
   draw_horizontal_line(x, y, width);
   draw_vertical_line(x + width, y, height);
@@ -126,20 +147,25 @@ Canvas::draw_rect(uint8_t x, uint8_t y, uint8_t width, uint8_t height)
 }
 
 void 
-Canvas::fill_rect(uint8_t x, uint8_t y, uint8_t width, uint8_t height)
+Canvas::fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height)
 {
-  for (uint8_t i = 0; i < width; i++)
-    for (uint8_t j = 0; j < height; j++)
-      draw_pixel(x + i, y + j);
+  if (width > height) {
+    for (uint16_t h = 0; h < height; h++)
+      draw_horizontal_line(x, y + h, width);
+  }
+  else {
+    for (uint16_t w = 0; w < width; w++)
+      draw_vertical_line(x + w, y, height);
+  }
 }
 
 #define dist(x, y) ((x > y) ? (x - y) : (y - x))
-#define swap(a, b) { uint8_t t = a; a = b; b = t; }
+#define swap(a, b) { uint16_t t = a; a = b; b = t; }
 
 void 
-Canvas::draw_line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1)
+Canvas::draw_line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
 {
-  uint8_t steep = (dist(y0, y1) > dist(x0, x1));
+  bool steep = (dist(y0, y1) > dist(x0, x1));
   if (steep) {
     swap(x0, y0);
     swap(x1, y1);
@@ -148,7 +174,7 @@ Canvas::draw_line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1)
     swap(x0, x1);
     swap(y0, y1);
   }
-  uint8_t dx, dy;
+  uint16_t dx, dy;
   dx = x1 - x0;
   dy = dist(y0, y1);
   int16_t err = dx / 2;
@@ -168,13 +194,13 @@ Canvas::draw_line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1)
 }
 
 void 
-Canvas::draw_vertical_line(uint8_t x, uint8_t y, uint8_t length)
+Canvas::draw_vertical_line(uint16_t x, uint16_t y, uint16_t length)
 {
   draw_line(x, y, x, y + length);
 }
 
 void 
-Canvas::draw_horizontal_line(uint8_t x, uint8_t y, uint8_t length)
+Canvas::draw_horizontal_line(uint16_t x, uint16_t y, uint16_t length)
 {
   draw_line(x, y, x + length, y);
 }
@@ -187,7 +213,7 @@ Canvas::draw_poly_P(const int8_t* poly, uint8_t scale)
     int8_t dx = pgm_read_byte(poly++);
     int8_t dy = pgm_read_byte(poly++);
     if (dx == 0 && dy == 0) return;
-    uint8_t x, y;
+    uint16_t x, y;
     get_cursor(x, y);
     x += dx*scale;
     y += dy*scale;
@@ -198,6 +224,7 @@ Canvas::draw_poly_P(const int8_t* poly, uint8_t scale)
 void 
 Canvas::draw_stroke_P(const int8_t* stroke, uint8_t scale)
 {
+  if (scale == 0) return;
   for (;;) {
     int8_t dx = pgm_read_byte(stroke++);
     int8_t dy = pgm_read_byte(stroke++);
@@ -206,7 +233,7 @@ Canvas::draw_stroke_P(const int8_t* stroke, uint8_t scale)
       move_cursor(dx*scale, dy*scale);
     }
     else {
-      uint8_t x, y;
+      uint16_t x, y;
       get_cursor(x, y);
       x += dx*scale;
       y += dy*scale;
@@ -216,7 +243,7 @@ Canvas::draw_stroke_P(const int8_t* stroke, uint8_t scale)
 }
 
 void 
-Canvas::draw_circle(uint8_t x, uint8_t y, uint8_t radius)
+Canvas::draw_circle(uint16_t x, uint16_t y, uint16_t radius)
 {
   int16_t f = 1 - radius;
   int16_t dx = 1;
@@ -249,7 +276,7 @@ Canvas::draw_circle(uint8_t x, uint8_t y, uint8_t radius)
 }
 
 void 
-Canvas::fill_circle(uint8_t x, uint8_t y, uint8_t radius)
+Canvas::fill_circle(uint16_t x, uint16_t y, uint16_t radius)
 {
   int16_t dx = 0, dy = radius;
   int16_t p = 1 - radius;
@@ -270,11 +297,11 @@ Canvas::fill_circle(uint8_t x, uint8_t y, uint8_t radius)
 }
 
 void 
-Canvas::draw_roundrect(uint8_t x, uint8_t y, 
-		       uint8_t width, uint8_t height,
-		       uint8_t radius)
+Canvas::draw_roundrect(uint16_t x, uint16_t y, 
+		       uint16_t width, uint16_t height,
+		       uint16_t radius)
 {
-  uint8_t diameter = 2 * radius;
+  uint16_t diameter = 2 * radius;
   int16_t f = 1 - radius;
   int16_t dx = 1;
   int16_t dy = -diameter;
@@ -315,13 +342,13 @@ Canvas::draw_roundrect(uint8_t x, uint8_t y,
 }
 
 void 
-Canvas::fill_roundrect(uint8_t x, uint8_t y, 
-		       uint8_t width, uint8_t height, 
-		       uint8_t radius)
+Canvas::fill_roundrect(uint16_t x, uint16_t y, 
+		       uint16_t width, uint16_t height, 
+		       uint16_t radius)
 {
   int16_t dx = 0, dy = radius;
   int16_t p = 1 - radius;
-  uint8_t diameter = 2 * radius;
+  uint16_t diameter = 2 * radius;
 
   // Adjust the position and fill the inner rectangle
   x += radius;
@@ -347,13 +374,13 @@ Canvas::fill_roundrect(uint8_t x, uint8_t y,
 }
 
 void 
-Canvas::draw_char(uint8_t x, uint8_t y, char c)
+Canvas::draw_char(uint16_t x, uint16_t y, char c)
 {
   uint8_t scale = get_text_scale();
   color16_t saved = set_pen_color(get_text_color());
   Font* font = get_text_font();
   font->draw(this, c, x, y, scale);
-  set_cursor(x + scale * (font->get_width(c)), y);
+  set_cursor(x + scale * (font->WIDTH + font->SPACING), y);
   set_pen_color(saved);
 }
 

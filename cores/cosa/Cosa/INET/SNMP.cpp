@@ -23,12 +23,12 @@
 
 // SNMP MIB MIB-2 System OID(1.3.6.1.2.1.1.n)
 const uint8_t SNMP::MIB2_SYSTEM::OID[] __PROGMEM = {
-  7,1,3,6,1,2,1,1
+  6,0x2b,6,1,2,1,1
 };
 
 // Arduino MIB OID(1.3.6.1.4.1.36582)
 const uint8_t SNMP::ARDUINO_MIB_OID[] __PROGMEM = {
-  9,1,3,6,1,4,1,130,157,102
+  8,0x2b,6,1,4,1,130,157,102
 };
 
 bool
@@ -70,7 +70,7 @@ SNMP::MIB2_SYSTEM::is_request(PDU& pdu)
 			 pgm_read_byte(ARDUINO_MIB_OID));
       break;
     case sysUpTime:
-      pdu.value.encode(SNMP::SYNTAX_UINT32, Watchdog::millis() / 1000L);
+      pdu.value.encode(SNMP::SYNTAX_TIME_TICKS, Watchdog::millis() / 1000L);
       break;
     case sysContact:
       pdu.value.encode_P(SNMP::SYNTAX_OCTETS, m_contact, strlen_P(m_contact));
