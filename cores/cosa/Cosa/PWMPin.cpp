@@ -174,7 +174,7 @@ PWMPin::set(uint8_t duty)
     OCR1B = duty;
     return;
   case Board::PWM4:
-    bit_set(TCCR3A, COM2A1);
+    //bit_set(TCCR3A, COM2A1);    // ERROR on Leonardo...
     OCR3A = duty;
     return;
   case Board::PWM5:
