@@ -5,9 +5,9 @@
 
 # Input characters are sent directly (only LF -> CR/LF/CRLF translation is
 # done), received characters are displayed as is (or escaped trough pythons
-# repr, useful for debug purposes). 
+# repr, useful for debug purposes).
 
-import sys, os, serial, threading
+import sys, os, serial, threading, time
 
 EXITCHARCTER = '\x1d'   # GS/CTRL+]
 MENUCHARACTER = '\x14'  # Menu: CTRL+T
@@ -133,11 +133,11 @@ REPR_MODES = ('raw', 'some control', 'all control', 'hex')
 class Miniterm:
     def __init__(self, port, baudrate, parity, rtscts, xonxoff, echo=False, convert_outgoing=CONVERT_CRLF, repr_mode=0):
         try:
-            self.serial = serial.serial_for_url(port, baudrate, parity=parity, rtscts=rtscts, xonxoff=xonxoff, timeout=1)
+            self.serial = serial.serial_for_url(port, baudrate, parity=parity, rtscts=rtscts, xonxoff=xonxoff, timeout=1, stopbits=2)
         except AttributeError:
             # happens when the installed pyserial is older than 2.5. use the
             # Serial class directly then.
-            self.serial = serial.Serial(port, baudrate, parity=parity, rtscts=rtscts, xonxoff=xonxoff, timeout=1)
+            self.serial = serial.Serial(port, baudrate, parity=parity, rtscts=rtscts, xonxoff=xonxoff, timeout=1, stopbits=2)
         self.echo = echo
         self.repr_mode = repr_mode
         self.convert_outgoing = convert_outgoing
@@ -194,9 +194,10 @@ class Miniterm:
 
     def reader(self):
         """loop and copy serial->console"""
-        try:
-            while self.alive:
+        while self.alive:
+            try:
                 data = self.serial.read(1)
+                # data = self.read()
                 # check for exit from device
                 if data == EXITCHARCTER:
                     self.stop()
@@ -214,26 +215,28 @@ class Miniterm:
                             sys.stdout.write('\n')
                         elif data == '\r':
                             pass
-                    elif data == '\n' and self.convert_outgoing == CONVERT_LF:
-                        sys.stdout.write('\n')
-                    elif data == '\r' and self.convert_outgoing == CONVERT_CR:
-                        sys.stdout.write('\n')
-                    else:
+                        elif data == '\n' and self.convert_outgoing == CONVERT_LF:
+                            sys.stdout.write('\n')
+                        elif data == '\r' and self.convert_outgoing == CONVERT_CR:
+                            sys.stdout.write('\n')
+                        else:
+                            sys.stdout.write(repr(data)[1:-1])
+                    elif self.repr_mode == 2:
+                        # escape all non-printable, including newline
                         sys.stdout.write(repr(data)[1:-1])
-                elif self.repr_mode == 2:
-                    # escape all non-printable, including newline
-                    sys.stdout.write(repr(data)[1:-1])
-                elif self.repr_mode == 3:
-                    # escape everything (hexdump)
-                    for character in data:
-                        sys.stdout.write("%s " % character.encode('hex'))
+                    elif self.repr_mode == 3:
+                        # escape everything (hexdump)
+                        for character in data:
+                            sys.stdout.write("%s " % character.encode('hex'))
                 sys.stdout.flush()
-        except serial.SerialException, e:
-            self.alive = False
-            # would be nice if the console reader could be interruptted at this
-            # point...
-            raise
-
+            except serial.SerialException, e:
+                time.sleep(0.001)
+                continue
+            except TypeError as e:
+                self.alive = False
+                # would be nice if the console reader could be interruptted at this
+                # point...
+                raise
 
     def writer(self):
         """loop and copy console->serial until EXITCHARCTER character is
@@ -363,7 +366,7 @@ class Miniterm:
                     menu_active = False
                 elif c == MENUCHARACTER: # next char will be for menu
                     menu_active = True
-                elif c == EXITCHARCTER: 
+                elif c == EXITCHARCTER:
                     self.stop()
                     break                                   # exit app
                 elif c == '\r':

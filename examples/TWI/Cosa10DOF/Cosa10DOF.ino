@@ -3,27 +3,27 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2013-2014, Mikael Patel
+ * Copyright (C) 2013-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * @section Description
  * Cosa demonstration of 10 DOF module (GY-80) with ADXL345, BMP085,
  * HMC5883L, and L3G4200D; 3-axis acceleratometer, thermometer, barometer,
- * 3-axis compass and 3-axis gyroscope. 
+ * 3-axis compass and 3-axis gyroscope.
  *
  * @section Circuit
  * The GY-80 10DOF module with pull-up resistors (4K7) for TWI signals and
  * 3V3 internal voltage converter.
- *
+ * @code
  *                           GY-80
  *                       +------------+
  * (VCC)---------------1-|VCC         |
@@ -37,16 +37,18 @@
  *                     9-|P-XCLR      |
  *                    10-|P-EOC       |
  *                       +------------+
+ * @endcode
  *
  * This file is part of the Arduino Che Cosa project.
  */
 
-#include "Cosa/TWI/Driver/ADXL345.hh"
-#include "Cosa/TWI/Driver/BMP085.hh"
-#include "Cosa/TWI/Driver/HMC5883L.hh"
-#include "Cosa/TWI/Driver/L3G4200D.hh"
+#include <ADXL345.h>
+#include <BMP085.h>
+#include <HMC5883L.h>
+#include <L3G4200D.h>
+
 #include "Cosa/Trace.hh"
-#include "Cosa/IOStream/Driver/UART.hh"
+#include "Cosa/UART.hh"
 #include "Cosa/Watchdog.hh"
 #include "Cosa/Memory.h"
 
@@ -83,10 +85,10 @@ void setup()
   TRACE(gyroscope.begin());
 
   // Set continous measurement mode, 3 Hz output, avg 8 samples, +-4.0 Gauss
-  compass.set_output_rate(HMC5883L::OUTPUT_RATE_3_HZ);
-  compass.set_samples_avg(HMC5883L::SAMPLES_AVG_8);
-  compass.set_range(HMC5883L::RANGE_4_0_GA);
-  compass.set_mode(HMC5883L::CONTINOUS_MEASUREMENT_MODE);
+  compass.output_rate(HMC5883L::OUTPUT_RATE_3_HZ);
+  compass.samples_avg(HMC5883L::SAMPLES_AVG_8);
+  compass.range(HMC5883L::RANGE_4_0_GA);
+  compass.mode(HMC5883L::CONTINOUS_MEASUREMENT_MODE);
   TRACE(compass.begin());
 
   sleep(1);

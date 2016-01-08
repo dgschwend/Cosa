@@ -3,7 +3,7 @@
 # Makefile for compiling Arduino sketches from command line
 # System part (i.e. project independent)
 #
-# Copyright (C) 2014 Mikael Patel, based on Sudar work. 
+# Copyright (C) 2014 Mikael Patel, based on Sudar work.
 # https://github.com/sudar/Arduino-Makefile
 #
 # Copyright (C) 2012 Sudar <http://sudarmuthu.com>, based on
@@ -25,12 +25,12 @@
 # Original version: 1.3.3 (sudar/Arduino-Makefile)
 #
 ########################################################################
-# 
+#
 # GETTING STARTED WITH ARDUINO-MAKEFILE IN COSA
 #
 # 1. Configure the build (build/Cosa.mk) by setting the path of the
-# Arduino installation. The Cosa version of Arduino-Makefile supports 
-# 1.0.X and 1.5.X. 
+# Arduino installation. The Cosa version of Arduino-Makefile supports
+# 1.0.X and 1.5.X.
 #   ARDUINO_DIR = $(HOME)/opt/arduino-1.0.X
 #
 # 2. Create a Makefile in the Sketch director. The minimum contents is:
@@ -40,10 +40,10 @@
 #
 # 3. Build, upload and monitor with makefile. The Cosa variant uses
 # miniterm.py as monitor. The default exit command is CTRL-ALT GR-]
-# 
+#
 # The most convinient way of using the Cosa build support is the shell
-# script cosa. It may be found in the $(COSA_DIR)/build directory. 
-# This script allows building without a makefile. 
+# script cosa. It may be found in the $(COSA_DIR)/build directory.
+# This script allows building without a makefile.
 #
 ########################################################################
 #
@@ -78,7 +78,7 @@
 #   ARDMK_DIR = /usr/share/arduino
 #   AVR_TOOLS_DIR = /usr
 #
-# On Windows declare this environmental variables using the windows 
+# On Windows declare this environmental variables using the windows
 # configuration options. Control Panel > System > Advanced system
 # settings. Also take into account that when you set them you have to
 # add '\' on all spaces and special characters.
@@ -118,7 +118,7 @@
 #
 # Given a normal sketch directory, all you need to do is to create a
 # small Makefile which defines a few things, and then includes this
-# one. 
+# one.
 #
 # For example:
 #
@@ -135,9 +135,13 @@
 #                   or your sketchbook's libraries directory)
 #
 #    MONITOR_PORT:  The port where the Arduino can be found (only needed
-#                   when uploading)
+#                   when uploading, resetting, or monitoring)
 #
-#    BOARD_TAG:      The tag for the board e.g. uno or mega
+#    MONITOR_PORTS: If MONITOR_PORT is not used, optionally provides a ':'
+#                   separated list of device path names to limit the
+#                   automatic detection to likely devices
+#
+#    BOARD_TAG:     The tag for the board e.g. uno or mega
 #                   'make show_boards' shows a list
 #
 # If you have your additional libraries relative to your source, rather
@@ -153,19 +157,19 @@
 #        include $(ARDMK_DIR)/Arduino.mk
 #
 # In any case, once this file has been created the typical workflow is
-# just 
+# just
 #
 #   $ make upload
 #
 # All of the object files are created in the build-{BOARD_TAG}
 # subdirectory. All sources should be in the current directory and can
-# include: 
+# include:
 #  - at most one .pde or .ino file which will be treated as C++ after
 #    the standard Arduino header and footer have been affixed.
 #  - any number of .c, .cpp, .s and .h files
 #
 # Included libraries are built in the build-{BOARD_TAG}/libs
-# subdirectory. 
+# subdirectory.
 #
 # Besides make upload, there are a couple of other targets that are
 # available. Do make help to get the complete list of targets and
@@ -254,53 +258,23 @@
 # ARDUINO_CORE_PATH = ~/sketchbook/hardware/tiny2/cores/tiny
 #
 ########################################################################
-#
-# SIZE OPTIONS
-#
-# Upload of oversized flash memory is prevented.
-#
-# For compatibility with previous versions, oversized data or eeprom
-# will still be uploaded by default.
-#
-# To prevent upload when data size is exceeded, define PREVENT_DATA_SIZE.
-# To prevent upload when eeprom size is exceeded, define PREVENT_EEPROM_SIZE.
-#
-# These depend on the following settings in boards.txt:
-#    maximum_data_size
-#    maximum_eeprom_size
-#
+
 ########################################################################
-
-#PREVENT_DATA_SIZE=yes
-#PREVENT_EEPROM_SIZE=yes
-
-SIZE_HIGHLIGHT = "\\n"
-
-ifdef PREVENT_DATA_SIZE
-	PREVENT_DATA_SIZE = 1
-  SIZE_DATA_HIGHLIGHT = ""
-else
-	PREVENT_DATA_SIZE = 0
-  SIZE_DATA_HIGHLIGHT = "\\n********************************************************************************\\n"
-endif
-
-ifdef PREVENT_EEPROM_SIZE
-	PREVENT_EEPROM_SIZE = 1
-  SIZE_EEPROM_HIGHLIGHT = ""
-else
-	PREVENT_EEPROM_SIZE = 0
-  SIZE_EEPROM_HIGHLIGHT = "\\n********************************************************************************\\n"
-endif
+# Display configuration
 
 arduino_output =
-# When output is not suppressed and we're in the top-level makefile, 
-# running for the first time (i.e., not after a restart after
-# regenerating the dependency file), then output the configuration. 
-ifndef ARDUINO_QUIET
-  ifeq ($(MAKE_RESTARTS),)
-    ifeq ($(MAKELEVEL),0)
-      arduino_output = $(info $(1))
-    endif
+# When we're in the top-level makefile, running for the first time
+# (i.e., not after a restart after regenerating the dependency file),
+# then output the configuration unless output is suppressed and
+# the goal is not 'config'.
+ifeq ($(MAKE_RESTARTS),)
+  ifeq ($(MAKELEVEL),0)
+    arduino_output = $(info $(1))
+  endif
+endif
+ifneq ($(MAKECMDGOALS),config)
+  ifdef ARDUINO_QUIET
+    arduino_output =
   endif
 endif
 
@@ -313,7 +287,7 @@ ifndef ARDMK_DIR
 else
   # Show_config_variable macro is defined in Common.mk file and is not
   # available yet. Let's define a variable to know that user specified
-  # ARDMK_DIR 
+  # ARDMK_DIR
   ARDMK_DIR_MSG = USER
 endif
 
@@ -321,7 +295,7 @@ endif
 include $(ARDMK_DIR)/Common.mk
 
 # Show_config_variable macro is available now. So let's print config
-# details for ARDMK_DIR 
+# details for ARDMK_DIR
 ifndef ARDMK_DIR_MSG
   $(call show_config_variable,ARDMK_DIR,[COMPUTED],(relative to $(notdir $(lastword $(MAKEFILE_LIST)))))
 else
@@ -425,7 +399,11 @@ ifndef OBJDUMP_NAME
 endif
 
 ifndef AR_NAME
-  AR_NAME = avr-ar
+  ifeq ($(shell expr $(ARDUINO_VERSION) '=' 166), 1)
+    AR_NAME = avr-gcc-ar
+  else
+    AR_NAME = avr-ar
+  endif
 endif
 
 ifndef SIZE_NAME
@@ -445,9 +423,9 @@ ifndef AVR_TOOLS_DIR
     $(call show_config_variable,AVR_TOOLS_DIR,[BUNDLED],(in Arduino distribution))
 
     # In Linux distribution of Arduino, the path to avrdude and
-    # avrdude.conf are different. More details at 
+    # avrdude.conf are different. More details at
     # https://github.com/sudar/Arduino-Makefile/issues/48 and
-    # https://groups.google.com/a/arduino.cc/d/msg/developers/D_m97jGr8Xs/uQTt28KO_8oJ 
+    # https://groups.google.com/a/arduino.cc/d/msg/developers/D_m97jGr8Xs/uQTt28KO_8oJ
     ifeq ($(CURRENT_OS),LINUX)
       # Check for old avr-gcc version
       ifeq ($(shell expr $(ARDUINO_VERSION) '<' 157), 1)
@@ -551,6 +529,13 @@ else
     $(call show_config_variable,BOARDS_TXT,[USER])
   endif
 
+endif
+
+# Check if boards.txt should be generated from installed cores. Assume that
+# variant files have been added (symbol links).
+BOARDS_TXT_AVAILABLE := $(call dir_if_exists,$(BOARDS_TXT))
+ifndef BOARDS_TXT_AVAILABLE
+  BOARDS_TXT_CAT := $(shell cat $(ARDUINO_SKETCHBOOK)/hardware/*/boards.txt > $(BOARDS_TXT))
 endif
 
 ########################################################################
@@ -672,29 +657,36 @@ ifeq ($(strip $(NO_CORE)),)
 
 endif
 
-# Everything gets built in here (include BOARD_TAG now)
-ifndef OBJDIR
-  OBJDIR = $(COSA_DIR)/obj/build-$(ARDUINO_VER)/$(BOARD_TAG)
-  $(call show_config_variable,OBJDIR,[COMPUTED],(from BOARD_TAG))
+# Everything gets built in OBJDIR which is based on the root object dir
+# (either $COSA_DIR/obj or $COSA_OBJDIR) and Arduino version, board tag,
+# and target
+ifndef COSA_OBJDIR
+  OBJDIR = $(COSA_DIR)/obj/build-$(ARDUINO_VER)/$(BOARD_TAG)/$(TARGET)
+  $(call show_config_variable,OBJDIR,[COMPUTED],(from COSA_DIR))
 else
-  $(call show_config_variable,OBJDIR,[USER])
+  OBJDIR = $(COSA_OBJDIR)/build-$(ARDUINO_VER)/$(BOARD_TAG)/$(TARGET)
+  $(call show_config_variable,OBJDIR,[COMPUTED],(from COSA_OBJDIR))
 endif
 
-########################################################################
-# Reset
+ifndef ARD_UTIL
+  ARD_UTIL_ALT := $(shell which ard-util 2> /dev/null)
+  ifdef ARD_UTIL_ALT
+    ARD_UTIL = $(ARD_UTIL_ALT)
+  else
+    # Same level as *.mk in bin directory when checked out from git or
+    # in $PATH when packaged
+    ARD_UTIL = $(ARDMK_DIR)/bin/ard-util
+  endif
+endif
+
+ARD_UTIL += $(ARD_UTIL_OPTS) --port $(call get_monitor_port)
+
+ifneq ($(CATERINA),)
+  ARD_UTIL += --caterina
+endif
 
 ifndef RESET_CMD
-  ARD_RESET_ARDUINO := $(shell which ard-reset-arduino 2> /dev/null)
-  ifndef ARD_RESET_ARDUINO
-    # Same level as *.mk in bin directory when checked out from git or
-    # in $PATH when packaged 
-    ARD_RESET_ARDUINO = $(ARDMK_DIR)/bin/ard-reset-arduino
-  endif
-  ifneq ($(CATERINA),)
-    RESET_CMD = $(ARD_RESET_ARDUINO) --caterina $(ARD_RESET_OPTS) $(call get_monitor_port)
-  else
-     RESET_CMD = $(ARD_RESET_ARDUINO) $(ARD_RESET_OPTS) $(call get_monitor_port)
-  endif
+  RESET_CMD = $(ARD_UTIL) --reset --appear
 endif
 
 ifneq ($(CATERINA),)
@@ -722,7 +714,7 @@ endif
 
 # CHK_SOURCES is used by flymake, creates a tmp file in the same
 # directory as the file under edition we must skip the verification in
-# this particular case 
+# this particular case
 ifeq ($(strip $(CHK_SOURCES)),)
   ifeq ($(strip $(NO_CORE)),)
     # Ideally, this should just check if there are more than one file
@@ -731,7 +723,7 @@ ifeq ($(strip $(CHK_SOURCES)),)
         $(call show_config_info,No .pde or .ino files found. If you are compiling .c or .cpp files then you need to explicitly include Arduino header files)
       else
         # TODO: Support more than one file.
-        # https://github.com/sudar/Arduino-Makefile/issues/49 
+        # https://github.com/sudar/Arduino-Makefile/issues/49
         $(error Need exactly one .pde or .ino file. This makefile doesn't support multiple .ino/.pde files yet)
       endif
    endif
@@ -743,7 +735,7 @@ ifeq ($(strip $(NO_CORE)),)
 
   ifdef ARDUINO_CORE_PATH
     CORE_C_SRCS = $(call rwildcard,$(ARDUINO_CORE_PATH),*.c)
-    CORE_CPP_SRCS = $(call rwildcard,$(ARDUINO_CORE_PATH),*.cpp) 
+    CORE_CPP_SRCS = $(call rwildcard,$(ARDUINO_CORE_PATH),*.cpp)
 
     ifneq ($(strip $(NO_CORE_MAIN_CPP)),)
       CORE_CPP_SRCS := $(filter-out %main.cpp, $(CORE_CPP_SRCS))
@@ -762,8 +754,11 @@ endif
 
 ifndef ARDUINO_LIBS
   # automatically determine included libraries
+  ARDUINO_LIBS += $(filter $(notdir $(wildcard $(ARDUINO_LIB_PATH)/*)), $(shell sed -ne "s/^ *\# *include *[<\"]\(.*\)\.h[>\"]/\1/p" $(LOCAL_SRCS)))
   ARDUINO_LIBS += $(filter $(notdir $(wildcard $(ARDUINO_LIB_PATH)/*)), $(shell sed -ne "s/^ *\# *include *[<\"]\(.*\)\.hh[>\"]/\1/p" $(LOCAL_SRCS)))
+  ARDUINO_LIBS += $(filter $(notdir $(wildcard $(ARDUINO_SKETCHBOOK)/libraries/*)), $(shell sed -ne "s/^ *\# *include *[<\"]\(.*\)\.h[>\"]/\1/p" $(LOCAL_SRCS)))
   ARDUINO_LIBS += $(filter $(notdir $(wildcard $(ARDUINO_SKETCHBOOK)/libraries/*)), $(shell sed -ne "s/^ *\# *include *[<\"]\(.*\)\.hh[>\"]/\1/p" $(LOCAL_SRCS)))
+  ARDUINO_LIBS += $(filter $(notdir $(wildcard $(USER_LIB_PATH)/*)), $(shell sed -ne "s/^ *\# *include *[<\"]\(.*\)\.h[>\"]/\1/p" $(LOCAL_SRCS)))
   ARDUINO_LIBS += $(filter $(notdir $(wildcard $(USER_LIB_PATH)/*)), $(shell sed -ne "s/^ *\# *include *[<\"]\(.*\)\.hh[>\"]/\1/p" $(LOCAL_SRCS)))
 endif
 
@@ -778,7 +773,7 @@ ifeq ($(strip $(NO_CORE)),)
   ifndef MONITOR_BAUDRATE
     ifeq ($(words $(LOCAL_PDE_SRCS) $(LOCAL_INO_SRCS)), 1)
       SPEED = $(shell egrep -h 'uart.begin *\([0-9]+\)' $(LOCAL_PDE_SRCS) $(LOCAL_INO_SRCS) | sed -e 's/[^0-9]//g'| head -n1)
-      MONITOR_BAUDRATE = $(findstring $(SPEED),300 1200 2400 4800 9600 14400 19200 28800 38400 57600 115200)
+      MONITOR_BAUDRATE = $(findstring $(SPEED),300 1200 2400 4800 9600 14400 19200 28800 38400 57600 115200 230400 250000 500000 1000000 2000000)
     endif
 
     ifeq ($(MONITOR_BAUDRATE),)
@@ -801,7 +796,7 @@ endif
 
 ifndef ARDUINO_HEADER
   # We should check for Arduino version, not just the file extension
-  # because, a .pde file can be used in Arduino 1.0 as well 
+  # because, a .pde file can be used in Arduino 1.0 as well
   ifeq ($(shell expr $(ARDUINO_VERSION) '<' 100), 1)
     ARDUINO_HEADER=WProgram.h
   else
@@ -852,7 +847,7 @@ ifneq (,$(strip $(LIBS_NOT_FOUND)))
     $(error The following libraries specified in ARDUINO_LIBS could not be found (searched USER_LIB_PATH and ARDUINO_LIB_PATH): $(LIBS_NOT_FOUND))
 endif
 
-SKETCHFLAGS = $(patsubst %,-D%,$(USEFLAGS)) 
+SKETCHFLAGS = $(patsubst %,-D%,$(USEFLAGS))
 SYS_LIBS := $(wildcard $(SYS_LIBS) $(addsuffix /utility,$(SYS_LIBS)))
 USER_LIBS := $(wildcard $(USER_LIBS) $(addsuffix /utility,$(USER_LIBS)))
 SYS_INCLUDES = $(patsubst %,-I%,$(SYS_LIBS))
@@ -870,7 +865,7 @@ USER_LIB_OBJS = $(patsubst $(USER_LIB_PATH)/%.cpp,$(OBJDIR)/libs/%.o,$(USER_LIB_
 DEPS = $(LOCAL_OBJS:.o=.d) $(LIB_OBJS:.o=.d) $(USER_LIB_OBJS:.o=.d) $(CORE_OBJS:.o=.d)
 
 # Optimization level for the compiler. You can get the list of options at
-# http://www.nongnu.org/avr-libc/user-manual/using_tools.html#gcc_optO 
+# http://www.nongnu.org/avr-libc/user-manual/using_tools.html#gcc_optO
 # Also read http://www.nongnu.org/avr-libc/user-manual/FAQ.html#faq_optflags
 ifndef OPTIMIZATION_LEVEL
   OPTIMIZATION_LEVEL=s
@@ -916,12 +911,15 @@ endif
 # Add extra flags for higher Arduino versions
 ifeq ($(shell expr $(ARDUINO_VERSION) '<' 157), 1)
   EXTRA_CFLAGS += -Wextra
-  EXTRA_LDFLAGS += 
+  EXTRA_LDFLAGS +=
   EXTRA_CXXFLAGS += -Wextra -std=gnu++0x -felide-constructors
 else
   EXTRA_CFLAGS += -Wextra -flto
   EXTRA_LDFLAGS += -w -Wl,-relax -flto
-  EXTRA_CXXFLAGS += -Wextra -flto -std=gnu++11 -felide-constructors -mcall-prologues
+  EXTRA_CXXFLAGS += -Woverloaded-virtual -Wextra -flto -std=gnu++11 -felide-constructors -fno-implement-inlines -fno-rtti -fno-threadsafe-statics -mcall-prologues
+endif
+ifeq ($(shell expr $(ARDUINO_VERSION) '<' 166), 1)
+  AR_NAME = avr-ar
 endif
 
 CFLAGS += $(EXTRA_FLAGS) $(EXTRA_CFLAGS)
@@ -936,7 +934,7 @@ MONITOR_PORT ?= $(ARDUINO_PORT)
 
 ifeq ($(CURRENT_OS), WINDOWS)
   # Expect MONITOR_PORT to be '1' or 'com1' for COM1 in Windows. Split
-  # it up into the two styles required: /dev/ttyS* for ard-reset-arduino 
+  # it up into the two styles required: /dev/ttyS* for ard-reset-arduino
   # and com* for avrdude. This also could work with /dev/com* device
   # names and be more consistent, but the /dev/com* is not recommended
   # by Cygwin and doesn't always show up.
@@ -950,10 +948,17 @@ ifneq ($(strip $(MONITOR_PORT)),)
   DEVICE_PATH = $(MONITOR_PORT)
   $(call show_config_variable,DEVICE_PATH,[COMPUTED],(from MONITOR_PORT))
 else
-  # If no port is specified, try to guess it from wildcards. Will only
-  # work if the Arduino is the only/first device matched. 
-  DEVICE_PATH = $(firstword $(wildcard /dev/ttyACM? /dev/ttyUSB? /dev/tty.usbserial* /dev/tty.usbmodem*))
-  $(call show_config_variable,DEVICE_PATH,[AUTODETECTED])
+  # If no port is specified, try to guess it from wildcards.
+  DEVICE_PATHS = $(wildcard /dev/ttyACM? /dev/ttyUSB? /dev/tty.usbserial* /dev/tty.usbmodem*)
+  ifneq ($(strip $(MONITOR_PORTS)),)
+    # Limit matches to those in MONITOR_PORTS list; if more than one, take first.
+    DEVICE_PATH = $(firstword $(filter $(subst :, ,$(MONITOR_PORTS)),$(DEVICE_PATHS)))
+    $(call show_config_variable,DEVICE_PATH,[LIMITED AUTODETECTED])
+  else
+    # Will only work if the Arduino is the only/first device matched.
+    DEVICE_PATH = $(firstword $(DEVICE_PATHS))
+    $(call show_config_variable,DEVICE_PATH,[AUTODETECTED])
+  endif
 endif
 
 # Returns the Arduino port (first wildcard expansion) if it exists, otherwise it errors.
@@ -1004,7 +1009,7 @@ $(call show_separator)
 # Rather than mess around with VPATH there are quasi-duplicate rules
 # here for building e.g. a system C++ file and a local C++
 # file. Besides making things simpler now, this would also make it
-# easy to change the build options in future 
+# easy to change the build options in future
 
 # Library sources rules
 $(OBJDIR)/libs/%.o: $(ARDUINO_LIB_PATH)/%.c
@@ -1154,13 +1159,13 @@ endif
 
 # Arduino programming options
 # -D Disable auto erase for flash memory, needed for Mega boards. See
-# https://github.com/sudar/Arduino-Makefile/issues/114#issuecomment-25011005) 
+# https://github.com/sudar/Arduino-Makefile/issues/114#issuecomment-25011005)
 AVRDUDE_ARD_OPTS = -D -c $(AVRDUDE_ARD_PROGRAMMER) -b $(AVRDUDE_ARD_BAUDRATE) -P
 ifeq ($(CURRENT_OS), WINDOWS)
   # Get_monitor_port checks to see if the monitor port exists,
   # assuming it is a file. In Windows, avrdude needs the port in the
   # format 'com1' which is not a file, so we have to add the COM-style
-  # port directly. 
+  # port directly.
   AVRDUDE_ARD_OPTS += $(COM_STYLE_MONITOR_PORT)
 else
   AVRDUDE_ARD_OPTS += $(call get_monitor_port)
@@ -1269,7 +1274,7 @@ error_on_caterina:
 	$(ERROR_ON_CATERINA)
 
 # Use submake so we can guarantee the reset happens before the upload,
-# even with make -j 
+# even with make -j
 upload:	$(TARGET_HEX) verify_size
 	$(call arduino_output,Resetting...)
 	$(RESET_CMD)
@@ -1294,7 +1299,7 @@ reset:
 
 # stty on MacOS likes -F, but on Debian it likes -f redirecting
 # stdin/out appears to work but generates a spurious error on MacOS at
-# least. 
+# least.
 reset_stty:
 	for STTYF in 'stty -F' 'stty --file' 'stty -f' 'stty <' ; \
 	  do $$STTYF /dev/tty >/dev/null 2>&1 && break ; \
@@ -1335,9 +1340,10 @@ config:
 	@$(ECHO) "Please refer to $(ARDMK_DIR)/Arduino.mk for more details.\n"
 
 boards:
-	@$(CAT) "$(BOARDS_TXT)" | grep -E "^[[:alnum:]|-]+.name" | sort -uf | sed 's/.name=/:/' | column -s: -t
+	@$(CAT) "$(BOARDS_TXT)" | grep -E ".name" | sort -uf | sed 's/.name=/:/' | column -s: -t
 
 monitor:
+	$(ARD_UTIL) --appear
 	@$(ECHO) "Use CTRL-ALT GR-] to exit monitor.\n"
 	$(MONITOR_CMD) $(get_monitor_port) $(MONITOR_BAUDRATE)
 
@@ -1354,21 +1360,21 @@ verify_size: $(TARGET_HEX)
 ifeq ($(strip $(HEX_MAXIMUM_SIZE)),)
 	@$(ECHO) "\nMaximum flash memory of $(BOARD_TAG) is not specified. Make sure the size of $(TARGET_HEX) is less than $(BOARD_TAG)\'s flash memory\n\n"
 else
-	@if [ ! -f $(TARGET_HEX).sizeok ]; then echo >&2 "$(SIZE_HIGHLIGHT)The size of the compiled binary file is greater than the $(BOARD_TAG)'s flash memory. \
-See http://www.arduino.cc/en/Guide/Troubleshooting#size for tips on reducing it.$(SIZE_HIGHLIGHT)"; fi
+	@if [ ! -f $(TARGET_HEX).sizeok ]; then echo >&2 "\\nThe size of the compiled binary file is greater than the $(BOARD_TAG)'s flash memory. \
+See http://www.arduino.cc/en/Guide/Troubleshooting#size for tips on reducing it.\\n"; fi
 	@if [ ! -f $(TARGET_HEX).sizeok ]; then false; fi
 endif
 ifeq ($(strip $(HEX_MAXIMUM_DATA_SIZE)),)
 	@$(ECHO) "\nMaximum data memory of $(BOARD_TAG) is not specified. Make sure the size of $(TARGET_HEX) is less than $(BOARD_TAG)\'s data memory\n\n"
 else
-	@if [ ! -f $(TARGET_HEX).datasizeok ]; then echo >&2 "$(SIZE_DATA_HIGHLIGHT)The data size of the compiled binary file is greater than the $(BOARD_TAG)'s data memory.$(SIZE_DATA_HIGHLIGHT)"; fi
-	@if [ ! -f $(TARGET_HEX).datasizeok -a $(PREVENT_DATA_SIZE) -eq 1 ]; then false; fi
+	@if [ ! -f $(TARGET_HEX).datasizeok ]; then echo >&2 "\\nThe data size of the compiled binary file is greater than the $(BOARD_TAG)'s data memory.\\n"; fi
+	@if [ ! -f $(TARGET_HEX).datasizeok ]; then false; fi
 endif
 ifeq ($(strip $(HEX_MAXIMUM_EEPROM_SIZE)),)
 	@$(ECHO) "\nMaximum eeprom memory of $(BOARD_TAG) is not specified. Make sure the size of $(TARGET_HEX) is less than $(BOARD_TAG)\'s eeprom memory\n\n"
 else
-	@if [ ! -f $(TARGET_HEX).eepromsizeok ]; then echo >&2 "$(SIZE_EEPROM_HIGHLIGHT)The eeprom size of the compiled binary file is greater than the $(BOARD_TAG)'s eeprom memory.$(SIZE_EEPROM_HIGHLIGHT)"; fi
-	@if [ ! -f $(TARGET_HEX).eepromsizeok -a $(PREVENT_EEPROM_SIZE) -eq 1 ]; then false; fi
+	@if [ ! -f $(TARGET_HEX).eepromsizeok ]; then echo >&2 "\\nThe eeprom size of the compiled binary file is greater than the $(BOARD_TAG)'s eeprom memory.\\n"; fi
+	@if [ ! -f $(TARGET_HEX).eepromsizeok ]; then false; fi
 endif
 
 generate_assembly: $(OBJDIR)/$(TARGET).s
@@ -1381,6 +1387,7 @@ avanti: $(TARGET_HEX) verify_size
 	$(call arduino_output,Resetting...)
 	$(RESET_CMD)
 	$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ARD_OPTS) $(AVRDUDE_UPLOAD_HEX)
+	$(ARD_UTIL) --ifcaterina --disappear --appear
 	@$(ECHO) "Use CTRL-ALT GR-] to exit monitor.\n"
 	$(MONITOR_CMD) $(get_monitor_port) $(MONITOR_BAUDRATE)
 

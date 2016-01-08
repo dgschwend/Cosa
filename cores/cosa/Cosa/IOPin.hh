@@ -3,18 +3,18 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2012-2014, Mikael Patel
+ * Copyright (C) 2012-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * This file is part of the Arduino Che Cosa project.
  */
 
@@ -43,51 +43,53 @@ public:
   {
     synchronized {
       if (pullup)
-	*PORT() |= m_mask; 
+	*PORT() |= m_mask;
     }
-    set_mode(mode);
+    this->mode(mode);
   }
 
   /**
    * Change IO-pin to given mode.
    * @param[in] mode new operation mode.
+   * @note atomic
    */
-  void set_mode(Mode mode)
+  void mode(Mode mode)
     __attribute__((always_inline))
   {
     synchronized {
       if (mode == OUTPUT_MODE)
-	*DDR() |= m_mask; 
+	*DDR() |= m_mask;
       else
-	*DDR() &= ~m_mask; 
+	*DDR() &= ~m_mask;
     }
   }
-  
+
   /**
    * Get current IO-pin mode.
    * @return mode.
    */
-  Mode get_mode() const
+  Mode mode() const
     __attribute__((always_inline))
   {
     return ((*DDR() & m_mask) == 0 ? INPUT_MODE : OUTPUT_MODE);
   }
-  
+
   /**
    * Change IO-pin to given mode.
    * @param[in] pin number.
    * @param[in] mode new operation mode.
+   * @note atomic
    */
-  static void set_mode(Board::DigitalPin pin, Mode mode) 
-    __attribute__((always_inline)) 
-  { 
+  static void mode(Board::DigitalPin pin, Mode mode)
+    __attribute__((always_inline))
+  {
     volatile uint8_t* ddr = DDR(pin);
     const uint8_t mask = MASK(pin);
     synchronized {
       if (mode == OUTPUT_MODE)
-	*ddr |= mask; 
+	*ddr |= mask;
       else
-	*ddr &= ~mask; 
+	*ddr &= ~mask;
     }
   }
 
@@ -96,8 +98,8 @@ public:
    * @param[in] pin number.
    * @return mode.
    */
-  static Mode get_mode(Board::DigitalPin pin)
-    __attribute__((always_inline)) 
+  static Mode mode(Board::DigitalPin pin)
+    __attribute__((always_inline))
   {
     return ((*DDR(pin) & MASK(pin)) == 0 ? INPUT_MODE : OUTPUT_MODE);
   }

@@ -3,26 +3,26 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2013-2014, Mikael Patel
+ * Copyright (C) 2013-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * @section Description
  * Cosa demonstration of the DHT11 device driver and simple relay
  * control.
  *
  * @section Circuit
- * 1. Connect Arduino/ATtiny to DHT11 module, EXT0 => DHT data pin 
- * with required pullup resistor. Connect power (VCC) and ground (GND).   
- * 2. Connect Arduino/ATtiny to Relay module, D6/D1 => relay#1, 
+ * 1. Connect Arduino/ATtiny to DHT11 module, EXT0 => DHT data pin
+ * with required pullup resistor. Connect power (VCC) and ground (GND).
+ * 2. Connect Arduino/ATtiny to Relay module, D6/D1 => relay#1,
  * D5/D3 => relay#2.
  * 3. Soft UART ATtiny D0 => UART RX.
  *
@@ -33,10 +33,11 @@
 #include "Cosa/OutputPin.hh"
 #include "Cosa/Memory.h"
 #include "Cosa/Trace.hh"
-#include "Cosa/IOStream/Driver/UART.hh"
+#include "Cosa/UART.hh"
 #include "Cosa/Watchdog.hh"
-#include "Cosa/RTC.hh"
-#include "Cosa/Driver/DHT.hh"
+#include "Cosa/RTT.hh"
+
+#include <DHT.h>
 
 // Sensor and relay control pins
 OutputPin led(Board::LED);
@@ -68,7 +69,7 @@ void setup()
 
   // Start the watchdog ticks and sensor monitoring
   Watchdog::begin();
-  RTC::begin();
+  RTT::begin();
 }
 
 void loop()
@@ -110,7 +111,7 @@ void loop()
     }
     if (temperature > TEMP_MAX) {
       trace << PSTR("Heater OFF") << endl;
-      trace.printf_P(PSTR("Runtime: %l:%d:%d\n"), hours, minutes, seconds);
+      trace.printf(PSTR("Runtime: %l:%d:%d\n"), hours, minutes, seconds);
       heater.set();
       heating = 0;
     }
@@ -138,9 +139,9 @@ void loop()
     venting = true;
   }
 
-  trace << sensor 
-	<< PSTR(", Heater = ") << heating 
-	<< PSTR(", Fan = ") << venting 
+  trace << sensor
+	<< PSTR(", Heater = ") << heating
+	<< PSTR(", Fan = ") << venting
 	<< endl;
 
   // Sample every 2 seconds

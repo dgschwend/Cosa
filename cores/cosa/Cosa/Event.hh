@@ -9,12 +9,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * This file is part of the Arduino Che Cosa project.
  */
 
@@ -24,6 +24,15 @@
 #include "Cosa/Types.h"
 #include "Cosa/Queue.hh"
 
+// Default event queue size
+#ifndef COSA_EVENT_QUEUE_MAX
+# if defined(BOARD_ATTINY)
+#   define COSA_EVENT_QUEUE_MAX 8
+# else
+#   define COSA_EVENT_QUEUE_MAX 16
+# endif
+#endif
+
 /**
  * Event data structure with type, source and value.
  */
@@ -31,18 +40,15 @@ class Event {
 public:
   /**
    * Size of event queue. Adjust depending on application. Must be
-   * Power(2).
+   * Power(2). Class Queue will statically check this.
    */
-#if defined(BOARD_ATTINY)
-  static const uint8_t QUEUE_MAX = 8;
-#else
-  static const uint8_t QUEUE_MAX = 16;
-#endif
+  static const uint8_t QUEUE_MAX = COSA_EVENT_QUEUE_MAX;
+
   /**
    * Event types are added here. Typical mapping from interrupts to
    * events. Note that the event is not a global numbering
    * scheme. Instead depends on the receiving/sending party, the
-   * protocol.  
+   * protocol.
    */
   enum {
     NULL_TYPE = 0,
@@ -64,7 +70,7 @@ public:
 
     CONNECT_TYPE,		// Device drivers and protocol stacks
     DISCONNECT_TYPE,
-    RECEIVE_REQUEST_TYPE,	
+    RECEIVE_REQUEST_TYPE,
     RECEIVE_COMPLETED_TYPE,
     SEND_REQUEST_TYPE,
     SEND_COMPLETED_TYPE,
@@ -80,7 +86,7 @@ public:
 
     SERVICE_REQUEST_TYPE,	// Servers
     SERVICE_RESPONSE_TYPE,
-    
+
     USER_TYPE = 64,		// User defined events/messages, 64-254
 
     ERROR_TYPE = 255		// Error event
@@ -92,14 +98,14 @@ public:
   class Handler {
   public:
     /**
-     * @override Event::Handler
+     * @override{Event::Handler}
      * Default null event handler. Should be redefined by sub-classes.
-     * Called by Event::dispatch(). 
+     * Called by Event::dispatch().
      * @param[in] type the event type.
      * @param[in] value the event value.
      */
-    virtual void on_event(uint8_t type, uint16_t value) 
-    { 
+    virtual void on_event(uint8_t type, uint16_t value)
+    {
       UNUSED(type);
       UNUSED(value);
     }
@@ -109,7 +115,7 @@ public:
   /**
    * Construct event with given type, target and value.
    * @param[in] type event identity (default NULL_TYPE(0)).
-   * @param[in] target event receiver (default null(0)).
+   * @param[in] target event receiver (default NULL(0)).
    * @param[in] value event value (default zero(0)).
    */
   Event(int8_t type = NULL_TYPE, Handler* target = NULL, uint16_t value = 0) :
@@ -122,36 +128,36 @@ public:
    * Return event type.
    * @return type.
    */
-  uint8_t get_type() const
-  { 
-    return (m_type); 
+  uint8_t type() const
+  {
+    return (m_type);
   }
 
   /**
    * Return event target.
    * @return pointer.
    */
-  Handler* get_target() const
-  { 
-    return (m_target); 
-  } 
+  Handler* target() const
+  {
+    return (m_target);
+  }
 
   /**
    * Return event value.
    * @return value.
    */
-  uint16_t get_value() const
-  { 
-    return (m_value); 
+  uint16_t value() const
+  {
+    return (m_value);
   }
 
   /**
    * Return event environment pointer.
    * @return pointer.
    */
-  void* get_env() const
-  { 
-    return ((void*) m_value); 
+  void* env() const
+  {
+    return ((void*) m_value);
   }
 
   /**

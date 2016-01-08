@@ -3,21 +3,21 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2012-2014, Mikael Patel
+ * Copyright (C) 2012-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * @section Description
  * Cosa LED blink with watchdog timeout interrupt callback and sleep
- * mode for low power.   
+ * mode for low power.
  *
  * @section Circuit
  * This example requires no special circuit. The Arduino Pin 13
@@ -26,27 +26,54 @@
  * This file is part of the Arduino Che Cosa project.
  */
 
+#include "Cosa/Job.hh"
 #include "Cosa/OutputPin.hh"
 #include "Cosa/Watchdog.hh"
 
-// Use the builtin led
-OutputPin ledPin(Board::LED);
+// Use the watchdog job scheduler
+Watchdog::Scheduler scheduler;
 
 // Interrupt handler; toggle the led for each interrupt
-void blink(void* env)
-{
-  UNUSED(env);
-  ledPin.toggle();
-}
+class Blink : public Job, public OutputPin {
+public:
+  Blink(Job::Scheduler* scheduler, uint16_t ms) :
+    Job(scheduler),
+    OutputPin(Board::LED),
+    m_period(ms)
+  {}
+  virtual void on_expired()
+  {
+    toggle();
+    schedule();
+  }
+  void schedule()
+  {
+    expire_after(m_period);
+    start();
+  }
+  void period(uint16_t ms)
+  {
+    m_period = ms;
+  }
+
+private:
+  uint16_t m_period;
+};
+
+Blink led(&scheduler, 512);
 
 void setup()
 {
-  // Start watchdog with approx. 0.5 s timeout and blink interrupt call
-  Watchdog::begin(512, blink);
+  Watchdog::begin();
+  led.schedule();
 }
 
 void loop()
 {
-  // Sleep during timeout wait
   sleep(10);
+  led.period(128);
+  sleep(10);
+  led.period(256);
+  sleep(10);
+  led.period(512);
 }

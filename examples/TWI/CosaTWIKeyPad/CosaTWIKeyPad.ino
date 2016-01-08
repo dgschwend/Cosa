@@ -3,18 +3,18 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2013, Mikael Patel
+ * Copyright (C) 2013-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * @section Description
  * Demonstration of a simple 3X4 keypad decoder using the PCF8574
  * Remote 8-bit I/O expander.
@@ -23,8 +23,9 @@
  * This demo was constructed using a MJKDZ LCD TWI adapter and a 4X4
  * soft keypad. Only 3X4 keys are used as the adapter back-light pin
  * is difficult to use for sampling. Below is to wiring from adapter
- * to keypad pins (left to right). 
+ * to keypad pins (left to right).
  * LCD Adapter => KEYPAD
+ * @code
  *   D7 => P0
  *   D6 => P1
  *   P5 => P2
@@ -32,12 +33,14 @@
  *   E  => P4
  *   RW => P5
  *   RS => P6
- *   
+ * @endcode
+ *
  * This file is part of the Arduino Che Cosa project.
  */
 
-#include "Cosa/TWI/Driver/PCF8574.hh"
-#include "Cosa/IOStream/Driver/UART.hh"
+#include <PCF8574.h>
+
+#include "Cosa/UART.hh"
 #include "Cosa/Watchdog.hh"
 #include "Cosa/Trace.hh"
 #include "Cosa/Memory.h"
@@ -51,16 +54,16 @@ public:
    */
   KeyPad3X4(uint8_t subaddr = 0x00) : PCF8574(subaddr) {}
 
-  /** 
+  /**
    * Initiate keypad interface. Return true if successful otherwise false.
    * @return bool.
    */
   bool begin();
-  
-  /** 
+
+  /**
    * Sample keypad for key pressed. Return key character (0..9) or
    * character (star or hash) if successful otherwise negative error
-   * code(-1). 
+   * code(-1).
    * @return value or negative error code(-1).
    */
   int sample();
@@ -70,16 +73,16 @@ bool
 KeyPad3X4::begin()
 {
   // Set the data direction; Use D4-D7 for input (key pad rows)
-  if (!set_data_direction(0xf0)) return (false);
+  if (!data_direction(0xf0)) return (false);
   // Write zero to detect key pressed
   write(0);
   return (true);
 }
 
-int 
+int
 KeyPad3X4::sample()
 {
-  // Sample the port and quick check if no key is pressed 
+  // Sample the port and quick check if no key is pressed
   uint8_t value = read();
   int res = -1;
   if (value == 0xf0) return (res);
@@ -89,7 +92,7 @@ KeyPad3X4::sample()
     // Write zero to detect which row the keys on
     write(row, 0);
     value = read();
-    // On next row? 
+    // On next row?
     if (value == 0xf0) continue;
     // Check which column
     for (uint8_t column = 0; column < 3; column++) {
@@ -99,7 +102,7 @@ KeyPad3X4::sample()
       if (row != 0) {
 	res = '1' + column + (3 * (3 - row));
       } else {
-	if (column == 0) res = '*'; 
+	if (column == 0) res = '*';
 	else if (column == 1) res = '0';
 	else res = '#';
       }

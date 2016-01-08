@@ -1,7 +1,10 @@
+*~
 arc
+build/boards.txt
+lib
+ref
 doc/html
 log/
-ref
 obj/
-build-*
+
 

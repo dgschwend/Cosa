@@ -3,18 +3,18 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2012-2014, Mikael Patel
+ * Copyright (C) 2012-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * This file is part of the Arduino Che Cosa project.
  */
 
@@ -50,7 +50,7 @@ public:
    */
   uint8_t available() const
     __attribute__((always_inline))
-  { 
+  {
     return ((NMEMB + m_put - m_get) & MASK);
   }
 
@@ -61,7 +61,7 @@ public:
   uint8_t room() const
     __attribute__((always_inline))
   {
-    return (NMEMB - m_put + m_get - 1) & MASK;
+    return ((NMEMB - m_put + m_get - 1) & MASK);
   }
 
   /**
@@ -70,17 +70,19 @@ public:
    * interrupt handler may push events.
    * @param[in] data pointer to member data buffer.
    * @return boolean.
-   * @pre data != 0
+   * @pre data != NULL
+   * @note atomic
    */
   bool enqueue(T* data);
 
   /**
-   * Enqueue given member data in program memory if storage is available. 
+   * Enqueue given member data in program memory if storage is available.
    * Return true(1) if successful otherwise false(0). Synchronised operation as
    * interrupt handler may push events.
    * @param[in] data pointer to member data buffer in program memory.
    * @return boolean.
-   * @pre data != 0
+   * @pre data != NULL
+   * @note atomic
    */
   bool enqueue_P(const T* data);
 
@@ -88,18 +90,20 @@ public:
    * Dequeue member data from queue to given buffer. Returns true(1)
    * if member was available and succcessful otherwise
    * false(0). Synchronised operation as interrupt handler may push
-   * events. 
+   * events.
    * @param[in,out] data pointer to member data buffer.
-   * @pre data != 0
+   * @pre data != NULL
    * @return boolean.
+   * @note atomic
    */
   bool dequeue(T* data);
 
   /**
    * Await data to become available from queue. Will perform a system
-   * sleep with the given sleep mode. 
+   * sleep with the given sleep mode.
    * @param[in,out] data pointer to member data buffer.
-   * @pre data != 0
+   * @pre data != NULL
+   * @note atomic
    */
   void await(T* data);
 
@@ -116,7 +120,7 @@ Queue<T,NMEMB>::enqueue(T* data)
 {
   synchronized {
     uint8_t next = (m_put + 1) & MASK;
-    if (next == m_get) synchronized_return (false);
+    if (UNLIKELY(next == m_get)) return (false);
     m_buffer[next] = *data;
     m_put = next;
   }
@@ -129,7 +133,7 @@ Queue<T,NMEMB>::enqueue_P(const T* data)
 {
   synchronized {
     uint8_t next = (m_put + 1) & MASK;
-    if (next == m_get) synchronized_return (false);
+    if (UNLIKELY(next == m_get)) return (false);
     memcpy_P(&m_buffer[next], data, sizeof(T));
     m_put = next;
   }
@@ -141,7 +145,7 @@ bool
 Queue<T,NMEMB>::dequeue(T* data)
 {
   synchronized {
-    if (m_get == m_put) synchronized_return (false);
+    if (UNLIKELY(m_get == m_put)) return (false);
     uint8_t next = (m_get + 1) & MASK;
     m_get = next;
     *data = m_buffer[next];

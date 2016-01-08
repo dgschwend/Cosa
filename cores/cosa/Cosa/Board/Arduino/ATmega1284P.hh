@@ -9,12 +9,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * This file is part of the Arduino Che Cosa project.
  */
 
@@ -28,13 +28,14 @@
  * Cosa pin symbol definitions for ATmega1284P based breadboards. Cosa
  * does not use pin numbers as Arduino/Wiring. Instead strong data
  * type is used (enum types) for the specific pin classes; DigitalPin,
- * AnalogPin, PWMPin, etc. 
+ * AnalogPin, PWMPin, etc.
  *
  * The static inline functions, SFR, BIT and UART, rely on compiler
- * optimizations to be reduced. 
+ * optimizations to be reduced.
  */
 class Board {
   friend class Pin;
+  friend class GPIO;
   friend class UART;
 private:
   /**
@@ -49,16 +50,16 @@ private:
    */
   static volatile uint8_t* SFR(uint8_t pin)
     __attribute__((always_inline))
-  { 
-    return (pin < 8  ? &PINB : 
-	    pin < 16 ? &PIND : 
+  {
+    return (pin < 8  ? &PINB :
+	    pin < 16 ? &PIND :
 	    pin < 24 ? &PINC :
 	               &PINA);
   }
 
   /**
    * Return bit position for given Arduino pin number in Special
-   * Function Register. 
+   * Function Register.
    * @param[in] pin number.
    * @return pin bit position.
    */
@@ -67,7 +68,7 @@ private:
   {
     return (pin & 0x7);
   }
-  
+
   /**
    * Return Pin Change Mask Register for given Arduino pin number.
    * @param[in] pin number.
@@ -75,9 +76,9 @@ private:
    */
   static volatile uint8_t* PCIMR(uint8_t pin)
     __attribute__((always_inline))
-  { 
-    return (pin < 8  ? &PCMSK1 : 
-	    pin < 16 ? &PCMSK3 : 
+  {
+    return (pin < 8  ? &PCMSK1 :
+	    pin < 16 ? &PCMSK3 :
 	    pin < 24 ? &PCMSK2 :
 	               &PCMSK0);
   }
@@ -89,7 +90,7 @@ private:
    */
   static volatile uint8_t* UART(uint8_t port)
     __attribute__((always_inline))
-  { 
+  {
     return (port == 1 ? &UCSR1A : &UCSR0A);
   }
 
@@ -163,7 +164,7 @@ public:
   } __attribute__((packed));
 
   /**
-   * PWM pin symbols; sub-set of digital pins to allow compile 
+   * PWM pin symbols; sub-set of digital pins to allow compile
    * time checking
    */
   enum PWMPin {
@@ -183,7 +184,7 @@ public:
   } __attribute__((packed));
 
   /**
-   * External interrupt pin symbols; sub-set of digital pins 
+   * External interrupt pin symbols; sub-set of digital pins
    * to allow compile time checking.
    */
   enum ExternalInterruptPin {
@@ -196,22 +197,22 @@ public:
    * Pin change interrupt. Number of port registers.
    */
   enum InterruptPin {
-    PCI0 = D24,			// PA0
-    PCI1 = D25,			// PA1
-    PCI2 = D26,			// PA2
-    PCI3 = D27,			// PA3
-    PCI4 = D28,			// PA4
-    PCI5 = D29,			// PA5
-    PCI6 = D30,			// PA6
-    PCI7 = D31,			// PA7
-    PCI8 = D0,			// PB0
-    PCI9 = D1,			// PB1
-    PCI10 = D2,			// PB2
-    PCI11 = D3,			// PB3
-    PCI12 = D4,			// PB4
-    PCI13 = D5,			// PB5
-    PCI14 = D6,			// PB6
-    PCI15 = D7,			// PB7
+    PCI0 = D0,			// PB0
+    PCI1 = D1,			// PB1
+    PCI2 = D2,			// PB2
+    PCI3 = D3,			// PB3
+    PCI4 = D4,			// PB4
+    PCI5 = D5,			// PB5
+    PCI6 = D6,			// PB6
+    PCI7 = D7,			// PB7
+    PCI8 = D8,			// PD0
+    PCI9 = D9,			// PD1
+    PCI10 = D10,		// PD2
+    PCI11 = D11,		// PD3
+    PCI12 = D12,		// PD4
+    PCI13 = D13,		// PD5
+    PCI14 = D14,		// PD6
+    PCI15 = D15,		// PD7
     PCI16 = D16,		// PC0
     PCI17 = D17,		// PC1
     PCI18 = D18,		// PC2
@@ -220,17 +221,17 @@ public:
     PCI21 = D21,		// PC5
     PCI22 = D22,		// PC6
     PCI23 = D23,		// PC7
-    PCI24 = D8,			// PD0
-    PCI25 = D9,			// PD1
-    PCI26 = D10,		// PD2
-    PCI27 = D11,		// PD3
-    PCI28 = D12,		// PD4
-    PCI29 = D13,		// PD5
-    PCI30 = D14,		// PD6
-    PCI31 = D15			// PD7
+    PCI24 = D24,		// PA0
+    PCI25 = D25,		// PA1
+    PCI26 = D26,		// PA2
+    PCI27 = D27,		// PA3
+    PCI28 = D28,		// PA4
+    PCI29 = D29,		// PA5
+    PCI30 = D30,		// PA6
+    PCI31 = D31			// PA7
   } __attribute__((packed));
 
-  /** 
+  /**
    * Size of pin maps.
    */
   enum {
@@ -275,7 +276,7 @@ public:
  * Redefinition of symbols to allow generic code.
  */
 #define USART_UDRE_vect USART0_UDRE_vect
-#define USART_RX_vect USART0_RX_vect 
+#define USART_RX_vect USART0_RX_vect
 #define USART_TX_vect USART0_TX_vect
 
 /**

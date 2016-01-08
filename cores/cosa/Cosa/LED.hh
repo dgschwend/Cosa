@@ -3,18 +3,18 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2013-2014, Mikael Patel
+ * Copyright (C) 2013-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * This file is part of the Arduino Che Cosa project.
  */
 
@@ -23,21 +23,21 @@
 
 #include "Cosa/Types.h"
 #include "Cosa/OutputPin.hh"
-#include "Cosa/Linkage.hh"
+#include "Cosa/Periodic.hh"
 #include "Cosa/Watchdog.hh"
 
 /**
  * Blinking LED; Use built-in LED or other digital pin for pulse.
  * Support simple application status indicator.
  */
-class LED : private Link {
+class LED : private Periodic {
 public:
   /**
    * Construct LED connected to the given pin.
    * @param[in] pin symbol (default built-in LED).
    */
-  LED(Board::DigitalPin pin = Board::LED) :
-    Link(),
+  LED(Job::Scheduler* scheduler, Board::DigitalPin pin = Board::LED) :
+    Periodic(scheduler, 512),
     m_pin(pin)
   {}
 
@@ -47,7 +47,7 @@ public:
   void on()
     __attribute__((always_inline))
   {
-    detach();
+    stop();
     m_pin.on();
   }
 
@@ -57,7 +57,7 @@ public:
   void off()
     __attribute__((always_inline))
   {
-    detach();
+    stop();
     m_pin.off();
   }
 
@@ -67,7 +67,9 @@ public:
   void normal_mode()
     __attribute__((always_inline))
   {
-    Watchdog::attach(this, 512);
+    stop();
+    period(512);
+    start();
   }
 
   /**
@@ -76,7 +78,9 @@ public:
   void alert_mode()
     __attribute__((always_inline))
   {
-    Watchdog::attach(this, 128);
+    stop();
+    period(128);
+    start();
   }
 
 private:
@@ -84,16 +88,12 @@ private:
   OutputPin m_pin;
 
   /**
-   * @override Event::Handler
-   * LED event handler; Toggle LED on timeout event.
-   * @param[in] type the type of event (timeout).
-   * @param[in] value the event value.
+   * @override{Job}
+   * The LED run virtual member function; Toggle LED on timeout event.
    */
-  virtual void on_event(uint8_t type, uint16_t value)
-  { 
-    UNUSED(type);
-    UNUSED(value);
-    m_pin.toggle(); 
+  virtual void run()
+  {
+    m_pin.toggle();
   }
 };
 

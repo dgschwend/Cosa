@@ -3,18 +3,18 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2012-2014, Mikael Patel
+ * Copyright (C) 2012-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * This file is part of the Arduino Che Cosa project.
  */
 
@@ -24,23 +24,18 @@
 #include <avr/wdt.h>
 
 #include "Cosa/Types.h"
-#include "Cosa/Event.hh"
-#include "Cosa/Linkage.hh"
+#include "Cosa/Job.hh"
+#include "Cosa/Clock.hh"
 
 /**
- * The AVR Watchdog is used as a low power timer for periodical
- * events and delay. 
+ * The Watchdog is used as a low power timer for periodical events
+ * and delay. Please note that the accuracy is only 1-10% if not
+ * calibrated (typical drift is 16-32 ms per second).
  */
 class Watchdog {
 public:
   /**
-   * Watchdog interrupt handler function prototype.
-   * @param[in] env interrupt handler environment.
-   */
-  typedef void (*InterruptHandler)(void* env);
-
-  /**
-   * Get initiated state.
+   * Returns true(1) if initiated.
    * @return bool.
    */
   static bool is_initiated()
@@ -49,76 +44,48 @@ public:
   }
 
   /**
-   * Get number of watchdog cycles.
-   * @return number of ticks.
-   */
-  static uint32_t ticks()
-  { 
-    return (s_ticks); 
-  }
-
-  /**
-   * Get Watchdog clock in milli-seconds.
-   * @return ms.
+   * Get watchdog clock in milli-seconds.
+   * @return time in milli-seconds.
+   * @note atomic.
    */
   static uint32_t millis()
     __attribute__((always_inline))
-  { 
-    return (s_ticks * ms_per_tick()); 
+  {
+    uint32_t res;
+    synchronized res = s_millis;
+    return (res);
   }
 
   /**
-   * Reset the ticks counter for time measurement.
+   * Set watchdog clock in millis-seconds.
+   * @param[in] ms milli-seconds.
+   * @note atomic.
    */
-  static void reset() 
-  { 
-    s_ticks = 0;
+  static void millis(uint32_t ms)
+  {
+    synchronized s_millis = ms;
   }
 
   /**
    * Get number of milli-seconds per tick.
    * @return milli-seconds.
    */
-  static uint16_t ms_per_tick() 
-  { 
-    return (16 << s_prescale); 
-  }
-  
-  /**
-   * Set watchdog timeout interrupt handler.
-   * @param[in] fn interrupt handler.
-   * @param[in] env environment pointer.
-   */
-  static void set(InterruptHandler fn, void* env = NULL) 
-  { 
-    synchronized {
-      s_handler = fn; 
-      s_env = env; 
-    }
+  static uint16_t ms_per_tick()
+  {
+    return (s_ms_per_tick);
   }
 
   /**
-   * Attach target to watchdog so that it will receive a timeout
-   * event with given period in milli-seconds.
-   * @param[in] target timeout target to add.
-   * @param[in] ms milliseconds.
+   * Start watchdog with given period (milli-seconds). The given
+   * timeout period is mapped to 16 milli-seconds and double periods
+   * (32, 64, 128, etc to approx 8 seconds).
+   * @param[in] ms timeout period in milli-seconds (default 16 ms).
    */
-  static void attach(Link* target, uint16_t ms);
+  static void begin(uint16_t ms = 16);
 
   /**
-   * Start watchdog with given period (milli-seconds) and sleep mode.
-   * The timeout period is mapped to 16 milli-seconds and double
-   * periods (32, 64, 128, etc to approx 8 seconds).
-   * @param[in] ms timeout period in milli-seconds.
-   * @param[in] handler of interrupts.
-   * @param[in] env handler environment.
-   */
-  static void begin(uint16_t ms = 16, 
-		    InterruptHandler handler = NULL,
-		    void* env = NULL);
-
-  /**
-   * Delay using watchdog timeouts and sleep mode.
+   * Delay using watchdog timeouts and sleep mode. Timeouts will be
+   * the nearest watchdog tick.
    * @param[in] ms sleep period in milli-seconds.
    */
   static void delay(uint32_t ms);
@@ -129,13 +96,14 @@ public:
   static void await()
     __attribute__((always_inline))
   {
-    delay(ms_per_tick());
+    delay(0);
   }
 
   /**
-   * Returns number of milli-seconds from given start.
-   * @param[in] start
-   * @return (millis() - start)
+   * Returns number of milli-seconds from given start time.
+   * @param[in] start time in milli-seconds.
+   * @return milli-seconds.
+   * @note atomic.
    */
   static uint32_t since(uint32_t start)
     __attribute__((always_inline))
@@ -145,49 +113,108 @@ public:
   }
 
   /**
-   * Stop watchdog. Turn off timout callback. May be restarted with begin(). 
+   * Stop watchdog. Turn off timout callback. May be restarted with
+   * begin().
    */
-  static void end() 
-  { 
-    wdt_disable(); 
+  static void end()
+  {
+    wdt_disable();
     s_initiated = false;
   }
 
   /**
-   * Default interrupt handler for timeout queues; push timeout events
-   * to all attached event handlers.
-   * @param[in] env interrupt handler environment.
+   * Watchdog Scheduler for jobs with milli-seconds as time unit.
+   * Constructor will automatically register the scheduler.
    */
-  static void push_timeout_events(void* env);
+  class Scheduler : public Job::Scheduler {
+  public:
+    /**
+     * Construct and register a watchdog scheduler. Should be a
+     * singleton.
+     */
+    Scheduler() : Job::Scheduler()
+    {
+      Watchdog::s_scheduler = this;
+    }
+
+    /**
+     * @override{Job::Scheduler}
+     * Return current watchdog time in milli-seconds.
+     * @return time in milli-seconds.
+     * @note atomic.
+     */
+    virtual uint32_t time()
+    {
+      return (Watchdog::millis());
+    }
+  };
 
   /**
-   * Alternative interrupt handler for watchdog events; push watchdog
-   * event to a main top loop. All attached event handlers are ignored.
-   * @param[in] env interrupt handler environment.
+   * Set the watchdog job scheduler. May be used to enable/disable job
+   * scheduler.
+   * @param[in] scheduler.
+   * @note atomic.
    */
-  static void push_watchdog_event(void* env)
-  { 
-    Event::push(Event::WATCHDOG_TYPE, 0, env);
+  static void job(Watchdog::Scheduler* scheduler)
+  {
+    synchronized s_scheduler = scheduler;
+  }
+
+  /**
+   * Get the watchdog job scheduler.
+   * @return scheduler.
+   */
+  static Watchdog::Scheduler* scheduler()
+  {
+    return (s_scheduler);
+  }
+
+  /**
+   * Watchdog Clock for Alarms with seconds as time unit.
+   */
+  class Clock : public ::Clock {
+  public:
+    /**
+     * Construct and register a Watchdog Clock. Should be a
+     * singleton.
+     */
+    Clock() : ::Clock()
+    {
+      Watchdog::s_clock = this;
+    }
+  };
+
+  /**
+   * Set the watchdog wall-clock.
+   * @param[in] clock.
+   * @note atomic.
+   */
+  static void wall(Clock* clock)
+  {
+    synchronized s_clock = clock;
+  }
+
+  /**
+   * Get the watchdog wall-clock.
+   * @return clock.
+   */
+  static Clock* clock()
+  {
+    return (s_clock);
   }
 
 private:
+  static bool s_initiated;		//!< Initiated flag.
+  static uint32_t s_millis;		//!< Milli-seconds counter.
+  static uint16_t s_ms_per_tick;	//!< Number of milli-seconds per tick.
+  static Event::Handler* s_handler;	//!< Watchdog timeout event handler.
+  static Scheduler* s_scheduler;	//!< Watchdog Job Scheduler.
+  static Clock* s_clock;		//!< Watchdog Clock.
+
   /**
-   * Do not allow instances. This is a static singleton.
+   * Do not allow instances. This is a name-space.
    */
   Watchdog() {}
-
-  // Watchdog interrupt handler and environment.
-  static InterruptHandler s_handler;
-  static void* s_env;
-
-  // Watchdog timeout queues (16, 32, ..., 8192 ms)
-  static const uint8_t TIMEQ_MAX = 10;
-  static Head s_timeq[TIMEQ_MAX];
-
-  // Watchdog ticks, prescale and mode.
-  static volatile uint32_t s_ticks;
-  static uint8_t s_prescale;
-  static bool s_initiated;
 
   /**
    * Calculate watchdog prescale given timeout period (in milli-seconds).

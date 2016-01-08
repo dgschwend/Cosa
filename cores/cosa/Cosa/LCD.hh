@@ -3,18 +3,18 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2013-2014, Mikael Patel
+ * Copyright (C) 2013-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * This file is part of the Arduino Che Cosa project.
  */
 
@@ -23,11 +23,13 @@
 
 #include "Cosa/Types.h"
 #include "Cosa/SPI.hh"
+#include "Cosa/Keypad.hh"
 #include "Cosa/IOStream.hh"
+#include "Cosa/AnalogPin.hh"
 
 /**
  * Common interface for LCD handlers; class LCD::Device as base
- * for device drivers and class LCD::IO for device port abstraction 
+ * for device drivers and class LCD::IO for device port abstraction
  * with two predefined implementation classes; Serial3W and SPI3W.
  * Serial3W uses OutputPins and SPI3W uses the SPI driver.
  */
@@ -55,70 +57,70 @@ public:
       m_tab(4),
       m_mode(0)
     {}
-    
+
     /**
-     * @override LCD::Device
-     * Start display for text output. Returns true if successful 
+     * @override{LCD::Device}
+     * Start display for text output. Returns true if successful
      * otherwise false.
      * @return boolean.
      */
     virtual bool begin() = 0;
 
     /**
-     * @override LCD::Device
-     * Stop display and power down. Returns true if successful 
+     * @override{LCD::Device}
+     * Stop display and power down. Returns true if successful
      * otherwise false.
      */
     virtual bool end() = 0;
-    
+
     /**
-     * @override LCD::Device
-     * Turn display backlight on. 
+     * @override{LCD::Device}
+     * Turn display backlight on.
      */
     virtual void backlight_on() {}
 
     /**
-     * @override LCD::Device
-     * Turn display backlight off. 
+     * @override{LCD::Device}
+     * Turn display backlight off.
      */
     virtual void backlight_off() {}
 
     /**
-     * @override LCD::Device
+     * @override{LCD::Device}
      * Set display contrast level.
      * @param[in] level to set.
      */
-    virtual void display_contrast(uint8_t level) 
+    virtual void display_contrast(uint8_t level)
     {
       UNUSED(level);
     }
 
     /**
-     * @override LCD::Device
-     * Turn display on. 
+     * @override{LCD::Device}
+     * Turn display on.
      */
     virtual void display_on() = 0;
 
     /**
-     * @override LCD::Device
-     * Turn display off. 
+     * @override{LCD::Device}
+     * Turn display off.
      */
     virtual void display_off() = 0;
-  
+
     /**
-     * @override LCD::Device
+     * @override{LCD::Device}
      * Display normal mode.
      */
     virtual void display_normal() {}
 
     /**
-     * @override LCD::Device
-     * Display inverse mode. 
+     * @override{LCD::Device}
+     * Display inverse mode.
      */
     virtual void display_inverse() {}
 
     /**
-     * @override LCD::Device
+     * @override{LCD::Device}
      * Clear display and move cursor to home.
      */
     virtual void display_clear() = 0;
@@ -136,7 +138,7 @@ public:
     }
 
     /**
-     * @override LCD::Device
+     * @override{LCD::Device}
      * Set cursor position to given position.
      * @param[in] x.
      * @param[in] y.
@@ -166,7 +168,7 @@ public:
      * @param[in] mode new text mode.
      * @return previous text mode.
      */
-    TextMode set_text_mode(TextMode mode)
+    TextMode text_mode(TextMode mode)
       __attribute__((always_inline))
     {
       TextMode previous = (TextMode) m_mode;
@@ -188,31 +190,31 @@ public:
   class IO {
   public:
     /**
-     * @override LCD::IO
+     * @override{LCD::IO}
      * Start of data/command transfer block.
      */
     virtual void begin() = 0;
 
     /**
-     * @override LCD::IO
+     * @override{LCD::IO}
      * End of data/command transfer block.
      */
     virtual void end() = 0;
 
     /**
-     * @override LCD::IO
+     * @override{LCD::IO}
      * Write byte (8bit) to display.
      * @param[in] data (8b) to write.
      */
     virtual void write(uint8_t data) = 0;
 
     /**
-     * @override LCD::IO
+     * @override{LCD::IO}
      * Write character buffer to display.
      * @param[in] buf pointer to buffer.
      * @param[in] size number of bytes in buffer.
      */
-    virtual void write(void* buf, size_t size) = 0;
+    virtual void write(const void* buf, size_t size) = 0;
   };
 
   /**
@@ -223,20 +225,20 @@ public:
     /**
      * Construct display device driver adapter with given pins.
      * @param[in] sdin screen data pin (default D6/D0).
-     * @param[in] sclk screen clock pin (default D7/D1). 
+     * @param[in] sclk screen clock pin (default D7/D1).
      * @param[in] sce screen chip enable pin (default D9/D3).
      */
 #if !defined(BOARD_ATTINY)
-    Serial3W(Board::DigitalPin sdin = Board::D6, 
-	     Board::DigitalPin sclk = Board::D7, 
+    Serial3W(Board::DigitalPin sdin = Board::D6,
+	     Board::DigitalPin sclk = Board::D7,
 	     Board::DigitalPin sce = Board::D9) :
       m_sdin(sdin, 0),
       m_sclk(sclk, 0),
       m_sce(sce, 1)
     {}
 #else
-    Serial3W(Board::DigitalPin sdin = Board::D0, 
-	     Board::DigitalPin sclk = Board::D1, 
+    Serial3W(Board::DigitalPin sdin = Board::D0,
+	     Board::DigitalPin sclk = Board::D1,
 	     Board::DigitalPin sce = Board::D3) :
       m_sdin(sdin, 0),
       m_sclk(sclk, 0),
@@ -245,47 +247,47 @@ public:
 #endif
 
     /**
-     * @override LCD::IO
+     * @override{LCD::IO}
      * Start of data/command transfer block.
      */
     virtual void begin()
-    { 
+    {
       m_sce.clear();
     }
 
     /**
-     * @override LCD::IO
+     * @override{LCD::IO}
      * End of data/command transfer block.
      */
     virtual void end()
-    { 
+    {
       m_sce.set();
     }
 
     /**
-     * @override LCD::IO
+     * @override{LCD::IO}
      * Write byte (8bit) to display. Must be in data/command transfer
-     * block. 
+     * block.
      * @param[in] data (8b) to write.
      */
     virtual void write(uint8_t data)
-    { 
-      m_sdin.write(data, m_sclk); 
+    {
+      m_sdin.write(data, m_sclk);
     }
 
     /**
-     * @override LCD::IO
+     * @override{LCD::IO}
      * Write character buffer to display. Must be in data/command transfer
      * block.
      * @param[in] buf pointer to buffer.
      * @param[in] size number of bytes in buffer.
      */
-    virtual void write(void* buf, size_t size)
+    virtual void write(const void* buf, size_t size)
     {
       uint8_t* dp = (uint8_t*) buf;
-      while (size--) m_sdin.write(*dp++, m_sclk); 
+      while (size--) m_sdin.write(*dp++, m_sclk);
     }
-    
+
   protected:
     OutputPin m_sdin;		//!< Serial data input.
     OutputPin m_sclk;		//!< Serial clock input.
@@ -309,47 +311,74 @@ public:
 #endif
 
     /**
-     * @override LCD::IO
+     * @override{LCD::IO}
      * Start of data/command transfer block.
      */
     virtual void begin()
-    { 
+    {
       spi.acquire(this);
       spi.begin();
     }
 
     /**
-     * @override LCD::IO
+     * @override{LCD::IO}
      * End of data/command transfer block.
      */
     virtual void end()
-    { 
+    {
       spi.end();
       spi.release();
     }
 
     /**
-     * @override LCD::IO
+     * @override{LCD::IO}
      * Write byte (8bit) to display. Must be in data/command transfer
      * block.
      * @param[in] data (8b) to write.
      */
     virtual void write(uint8_t data)
-    { 
+    {
       spi.transfer(data);
     }
 
     /**
-     * @override LCD::IO
+     * @override{LCD::IO}
      * Write character buffer to display. Must be in data/command transfer
      * block.
      * @param[in] buf pointer to buffer.
      * @param[in] size number of bytes in buffer.
      */
-    virtual void write(void* buf, size_t size)
+    virtual void write(const void* buf, size_t size)
     {
       spi.write(buf, size);
     }
+  };
+
+  /**
+   * LCD Keypad shield, keypad handler. The class represents the
+   * necessary configuration; keypad sensor on analog pin A0 and
+   * mapping vector.
+   */
+  class Keypad : public ::Keypad {
+  public:
+    // Key index
+    enum {
+      NO_KEY = 0,
+      SELECT_KEY,
+      LEFT_KEY,
+      DOWN_KEY,
+      UP_KEY,
+      RIGHT_KEY
+    } __attribute__((packed));
+
+    /** LCD Keypad constructor with internal key map. */
+    Keypad(Job::Scheduler* scheduler, Board::AnalogPin pin = Board::A0) :
+      ::Keypad(scheduler, pin, m_map)
+    {}
+
+  private:
+    /** Analog reading to key index map. */
+    static const uint16_t m_map[] PROGMEM;
   };
 };
 

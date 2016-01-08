@@ -9,21 +9,22 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * @section Description
  * Cosa Arduino main program. Calls sketch functions; setup() and
- * loop() and handles the iteration. 
+ * loop() and handles the iteration.
  *
  * This file is part of the Arduino Che Cosa project.
  */
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include "Cosa/CPU.hh"
 #include "Cosa/Power.hh"
 
 /**
@@ -35,7 +36,7 @@ void init()
 {
   // Adjust frequency scaling on Teensy; default is no scaling on Cosa
 #if defined(PJRC_TEENSY_2_0) || defined(PJRC_TEENSYPP_2_0)
-  Power::clock_prescale(0);
+  CPU::clock_prescale(0);
 #endif
 
   // Set analog converter prescale factor and but do not enable conversion
@@ -46,8 +47,8 @@ void init()
 #else
   ADCSRA |= (_BV(ADPS1) | _BV(ADPS0));
 #endif
-  
-  // Disable analog comparator 
+
+  // Disable analog comparator
   ACSR = _BV(ACD);
 
   // The bootloader connects pins 0 and 1 to the USART; disconnect them
@@ -66,6 +67,9 @@ void init()
   UDIEN = 0;
 #endif
 
+  // Power down all modules.
+  Power::all_disable();
+
   // Allow the board to set ports in a safe state. Typically chip
   // select pins to board devices
   Board::init();
@@ -78,7 +82,7 @@ void init()
  * Default setup function. This function may be overridden.
  */
 void setup() __attribute__((weak));
-void setup() 
+void setup()
 {
 }
 
@@ -86,9 +90,9 @@ void setup()
  * Default loop function. This function may be overridden.
  */
 void loop() __attribute__((weak));
-void loop() 
-{ 
-  exit(0); 
+void loop()
+{
+  exit(0);
 }
 
 /**
@@ -104,11 +108,33 @@ int main(void)
 }
 
 /**
+ * The exit function. This function may be overridden.
+ */
+void exit(int status) __attribute__((weak));
+void exit(int status)
+{
+  UNUSED(status);
+
+  cli();
+
+#if defined(USBCON)
+  extern void USB_Keepalive(void);
+  // Never returns
+  USB_Keepalive();
+#endif
+
+  // Hang forever in sleep mode
+  while (1)
+    Power::sleep();
+}
+
+/**
  * Default delay function; busy-wait given number of milli-seconds.
  * @param[in] ms milli-seconds delay.
  */
-static void default_delay(uint32_t ms) 
-{ 
+static void default_delay(uint32_t ms)
+{
+  if (UNLIKELY(ms == 0)) return;
   while (ms--) DELAY(1000);
 }
 
@@ -116,18 +142,18 @@ static void default_delay(uint32_t ms)
  * Default sleep function; delay given number of seconds.
  * @param[in] s seconds delay.
  */
-static void default_sleep(uint16_t s) 
-{ 
+static void default_sleep(uint16_t s)
+{
   delay(s * 1000L);
 }
 
 /**
- * Default yield function; enter sleep mode and wait for 
+ * Default yield function; enter sleep mode and wait for
  * any interrupt.
  */
-static void default_yield() 
-{ 
-  Power::sleep(); 
+static void default_yield()
+{
+  Power::sleep();
 }
 
 /* Default setting of multi-tasking functions */
@@ -138,27 +164,27 @@ void (*yield)() = default_yield;
 /**
  * Support for local static variables
  */
-namespace __cxxabiv1 
+namespace __cxxabiv1
 {
   typedef int __guard;
 
-  extern "C" int __cxa_guard_acquire(__guard *g) 
-  { 
+  extern "C" int __cxa_guard_acquire(__guard *g)
+  {
     UNUSED(g);
-    return (0); 
+    return (0);
   }
 
-  extern "C" void __cxa_guard_release(__guard *g) 
+  extern "C" void __cxa_guard_release(__guard *g)
   {
     UNUSED(g);
   }
 
-  extern "C" void __cxa_guard_abort(__guard *g) 
+  extern "C" void __cxa_guard_abort(__guard *g)
   {
     UNUSED(g);
   }
 
-  extern "C" void __cxa_pure_virtual(void) 
+  extern "C" void __cxa_pure_virtual(void)
   {
   }
 

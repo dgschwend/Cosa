@@ -3,25 +3,25 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2013-2014, Mikael Patel
+ * Copyright (C) 2013-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * @section Description
  * Cosa demonstration of a TWI master-slave; Remote Pin handling.
  * Read/Write pins on slave (typically ATtiny84/85).
  *
  * @section Circuit
  * The Arduino analog pins 4 (SDA) and 5 (SCL) are used for I2C/TWI
- * connection. 
+ * connection.
  *
  * This file is part of the Arduino Che Cosa project.
  */
@@ -31,7 +31,7 @@
 #include "Cosa/OutputPin.hh"
 #include "Cosa/Watchdog.hh"
 #include "Cosa/Trace.hh"
-#include "Cosa/IOStream/Driver/UART.hh"
+#include "Cosa/UART.hh"
 #include "Cosa/Memory.h"
 
 OutputPin ledPin(Board::LED);
@@ -72,13 +72,13 @@ RemotePin::read(Board::DigitalPin pin, uint8_t& value)
 {
   Command cmd(READ_OP, pin);
   bool res = false;
-  twi.begin(&dev);
+  twi.acquire(&dev);
   uint8_t count = twi.write(&cmd, sizeof(cmd));
   if (count != sizeof(cmd)) goto error;
   count = twi.read(&value, sizeof(value));
   res = (count == sizeof(value));
  error:
-  twi.end();
+  twi.release();
   return (res);
 }
 
@@ -86,9 +86,9 @@ bool
 RemotePin::write(Board::DigitalPin pin, uint8_t value)
 {
   Command cmd(WRITE_OP, pin);
-  twi.begin(&dev);
+  twi.acquire(&dev);
   uint8_t count = twi.write(cmd.as_char, &value, sizeof(value));
-  twi.end();
+  twi.release();
   return (count == sizeof(cmd) + sizeof(value));
 }
 

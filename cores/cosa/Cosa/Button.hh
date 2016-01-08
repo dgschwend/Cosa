@@ -9,12 +9,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * This file is part of the Arduino Che Cosa project.
  */
 
@@ -23,16 +23,16 @@
 
 #include "Cosa/Types.h"
 #include "Cosa/InputPin.hh"
-#include "Cosa/Linkage.hh"
+#include "Cosa/Periodic.hh"
 #include "Cosa/Watchdog.hh"
 
 /**
  * Debounded Button; Sampled input pin (with internal pullup
- * resistor). Uses a watchdog timeout event (64 ms) for sampling and
- * on change calls an event action. Subclass Button and implement the
- * virtual on_change() method. Use the subclass for any state needed
- * for the action function. Connect button/switch from pin to
- * ground. Internal pull-up resistor is activated.
+ * resistor). Uses a periodic function with timout of 64 ms for
+ * sampling and on change calls an event action. Subclass Button and
+ * implement the virtual on_change() method. Use the subclass for any
+ * state needed for the action function. Connect button/switch from
+ * pin to ground. Internal pull-up resistor is activated.
  *
  * @section Circuit
  * @code
@@ -46,16 +46,18 @@
  * @section Limitations
  * Button toggle faster than sample period may be missed. This is the
  * case when connecting to a Rotary Encoder.
- * 
+ *
  * @section See Also
- * The Button event handler requires the usage of an event dispatch. 
- * See Event.hh. 
+ * The Button event handler requires the usage of an event dispatch or
+ * implementing the virtual member function Job::on_expired() to call
+ * run() and reschedule().
+ * See Event.hh.
  */
-class Button : public InputPin, private Link {
+class Button : public InputPin, public Periodic {
 public:
   /**
    * Button change detection modes; falling (high to low), rising (low
-   * to high) and change (falling or rising). 
+   * to high) and change (falling or rising).
    */
   enum Mode {
     ON_FALLING_MODE = 0,	// High to low transition.
@@ -64,42 +66,29 @@ public:
   } __attribute__((packed));
 
   /**
-   * Construct a button connected to the given pin and with 
-   * the given change detection mode. 
+   * Construct a button connected to the given pin and with
+   * the given change detection mode. The scheduler should allow
+   * periodic jobs with a time unit of milli-seconds
+   * (e.g. Watchdog::Scheduler).
+   * @param[in] scheduler for periodic job.
    * @param[in] pin number.
    * @param[in] mode change detection mode.
    */
-  Button(Board::DigitalPin pin, Mode mode = ON_CHANGE_MODE) :
+  Button(Job::Scheduler* scheduler,
+	 Board::DigitalPin pin,
+	 Mode mode = ON_CHANGE_MODE) :
     InputPin(pin, InputPin::PULLUP_MODE),
-    Link(),
+    Periodic(scheduler, SAMPLE_MS),
     MODE(mode),
     m_state(is_set())
   {}
 
   /**
-   * Start the button handler.
-   */
-  void begin()
-    __attribute__((always_inline))
-  {
-    Watchdog::attach(this, SAMPLE_MS);
-  }
-
-  /**
-   * Stop the button handler.
-   */
-  void end()
-    __attribute__((always_inline))
-  {
-    detach();
-  }
-
-  /**
-   * @override Button
-   * The button change event handler. Called when a change
-   * corresponding to the mode has been detected. Event types are;
-   * Event::FALLING_TYPE, Event::RISING_TYPE, and Event::CHANGE_TYPE. 
-   * Sub-class must override this method.
+   * @override{Button}
+   * The button change handler. Called when a change corresponding to
+   * the mode has been detected. Event types are; Event::FALLING_TYPE,
+   * Event::RISING_TYPE, and Event::CHANGE_TYPE. Sub-class must
+   * override this method.
    * @param[in] type event type.
    */
   virtual void on_change(uint8_t type) = 0;
@@ -115,13 +104,23 @@ protected:
   uint8_t m_state;
 
   /**
-   * @override Event::Handler
-   * Button event handler. Called by event dispatch. Samples the
-   * attached pin and calls the pin change handler, on_change(). 
-   * @param[in] type the type of event (timeout).
-   * @param[in] value the event value.
+   * @override{Job}
+   * Button periodic function. Called by job scheduler on
+   * timeout. Samples the  attached pin and calls the pin change
+   * handler, on_change().
    */
-  virtual void on_event(uint8_t type, uint16_t value);
+  virtual void run()
+  {
+    // Update the button state
+    uint8_t old_state = m_state;
+    m_state = is_set();
+    uint8_t new_state = m_state;
+
+    // If changed according to mode call the pin change handler
+    if ((old_state != new_state) &&
+	((MODE == ON_CHANGE_MODE) || (new_state == MODE)))
+      on_change(Event::FALLING_TYPE + MODE);
+  }
 };
 
 #endif

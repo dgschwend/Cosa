@@ -3,18 +3,18 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2013, Mikael Patel
+ * Copyright (C) 2013-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * This file is part of the Arduino Che Cosa project.
  */
 
@@ -34,15 +34,15 @@
 
 TWI twi  __attribute__ ((weak));
 
-void 
-TWI::Slave::set_write_buf(void* buf, size_t size)
+void
+TWI::Slave::write_buf(void* buf, size_t size)
 {
   twi.m_vec[WRITE_IX].buf = buf;
   twi.m_vec[WRITE_IX].size = size;
 }
 
-void 
-TWI::Slave::set_read_buf(void* buf, size_t size)
+void
+TWI::Slave::read_buf(void* buf, size_t size)
 {
   twi.m_vec[READ_IX].buf = buf;
   twi.m_vec[READ_IX].size = size;
@@ -52,26 +52,25 @@ void
 TWI::Slave::begin()
 {
   twi.m_dev = this;
-  twi.m_target = this;
-  twi.set_state(TWI::IDLE);
+  twi.state(TWI::IDLE);
   synchronized {
     USICR = TWI::CR_START_MODE;
     USISR = TWI::SR_CLEAR_ALL;
   }
 }
 
-ISR(USI_START_vect) 
+ISR(USI_START_vect)
 {
-  if (twi.get_state() != TWI::IDLE) return;
-  twi.set_mode(IOPin::INPUT_MODE);
+  if (twi.state() != TWI::IDLE) return;
+  twi.mode(IOPin::INPUT_MODE);
   USICR = TWI::CR_TRANSFER_MODE;
   USISR = TWI::SR_CLEAR_ALL;
-  twi.set_state(TWI::START_CHECK);
+  twi.state(TWI::START_CHECK);
 }
 
-ISR(USI_OVF_vect) 
+ISR(USI_OVF_vect)
 {
-  switch (twi.get_state()) {
+  switch (twi.state()) {
     /**
      * Transaction Start Mode
      */
@@ -80,15 +79,15 @@ ISR(USI_OVF_vect)
       uint8_t addr = USIDR;
       if ((addr & TWI::ADDR_MASK) != twi.m_dev->m_addr) goto restart;
       if (addr & TWI::READ_OP) {
-	twi.set_state(TWI::READ_REQUEST);
-	twi.set_buf(TWI::READ_IX);
+	twi.state(TWI::READ_REQUEST);
+	twi.buf(TWI::READ_IX);
       }
       else {
-	twi.set_state(TWI::WRITE_REQUEST);
-	twi.set_buf(TWI::WRITE_IX);
+	twi.state(TWI::WRITE_REQUEST);
+	twi.buf(TWI::WRITE_IX);
       }
       USIDR = 0;
-      twi.set_mode(IOPin::OUTPUT_MODE);
+      twi.mode(IOPin::OUTPUT_MODE);
       USISR = TWI::SR_CLEAR_ACK;
     }
     break;
@@ -104,62 +103,62 @@ ISR(USI_OVF_vect)
       uint8_t data;
       if (!twi.get(data)) goto restart;
       USIDR = data;
-      twi.set_mode(IOPin::OUTPUT_MODE);
+      twi.mode(IOPin::OUTPUT_MODE);
       USISR = TWI::SR_CLEAR_DATA;
-      twi.set_state(TWI::READ_COMPLETED);
+      twi.state(TWI::READ_COMPLETED);
     }
     break;
 
   case TWI::READ_COMPLETED:
-    twi.set_mode(IOPin::INPUT_MODE);
+    twi.mode(IOPin::INPUT_MODE);
     USIDR = 0;
     USISR = TWI::SR_CLEAR_ACK;
-    twi.set_state(TWI::ACK_CHECK);
+    twi.state(TWI::ACK_CHECK);
     break;
 
     /**
      * Slave Receiver Mode
      */
   case TWI::WRITE_REQUEST:
-    twi.set_mode(IOPin::INPUT_MODE);
+    twi.mode(IOPin::INPUT_MODE);
     USISR = TWI::SR_CLEAR_DATA;
-    twi.set_state(TWI::WRITE_COMPLETED);
+    twi.state(TWI::WRITE_COMPLETED);
     DELAY(20);
     if (USISR & _BV(USIPF)) {
       USICR = TWI::CR_SERVICE_MODE;
       USISR = TWI::SR_CLEAR_ALL;
-      Event::push(Event::WRITE_COMPLETED_TYPE, twi.m_target, twi.m_count);
-      twi.set_state(TWI::SERVICE_REQUEST);
+      twi.m_dev->on_completion(Event::WRITE_COMPLETED_TYPE, twi.m_count);
+      twi.state(TWI::SERVICE_REQUEST);
     }
     break;
-    
+
   case TWI::WRITE_COMPLETED:
     {
       uint8_t data = USIDR;
       USIDR = (twi.put(data) ? 0x00 : 0x80);
-      twi.set_mode(IOPin::OUTPUT_MODE);
+      twi.mode(IOPin::OUTPUT_MODE);
       USISR = TWI::SR_CLEAR_ACK;
-      twi.set_state(TWI::WRITE_REQUEST);
+      twi.state(TWI::WRITE_REQUEST);
     }
     break;
 
   restart:
   default:
-    twi.set_mode(IOPin::INPUT_MODE);
+    twi.mode(IOPin::INPUT_MODE);
     USICR = TWI::CR_START_MODE;
     USISR = TWI::SR_CLEAR_DATA;
-    twi.set_state(TWI::IDLE);
+    twi.state(TWI::IDLE);
   }
 }
 
-void 
+void
 TWI::Slave::on_event(uint8_t type, uint16_t value)
 {
   if (type != Event::WRITE_COMPLETED_TYPE) return;
   void* buf = twi.m_vec[WRITE_IX].buf;
   size_t size = value;
   on_request(buf, size);
-  twi.set_state(IDLE);
+  twi.state(IDLE);
   synchronized {
     USICR = TWI::CR_START_MODE;
     USISR = TWI::SR_CLEAR_DATA;
@@ -169,7 +168,6 @@ TWI::Slave::on_event(uint8_t type, uint16_t value)
 TWI::TWI() :
   m_sda((Board::DigitalPin) Board::SDA, IOPin::INPUT_MODE, true),
   m_scl((Board::DigitalPin) Board::SCL, IOPin::OUTPUT_MODE, true),
-  m_target(0),
   m_state(IDLE),
   m_next(0),
   m_last(0),
@@ -186,7 +184,7 @@ TWI::TWI() :
 bool
 TWI::start()
 {
-  // Release SCL to ensure that (repeated) start can be performed 
+  // Release SCL to ensure that (repeated) start can be performed
   m_scl.set();
   while (!m_scl.is_set())
     ;
@@ -210,9 +208,9 @@ TWI::transfer(uint8_t data, uint8_t bits)
   if (bits == 1) SR |= (0x0E << USICNT0);
   USIDR = data;
   USISR = SR;
-  
+
   // Clock bits onto the bus using software strobe
-  do { 
+  do {
     DELAY(T2);
     USICR = CR_DATA_MODE;
     while (!m_scl.is_set())
@@ -225,7 +223,7 @@ TWI::transfer(uint8_t data, uint8_t bits)
   // Read received data and release bus
   uint8_t res = USIDR;
   USIDR = 0xff;
-  set_mode(IOPin::OUTPUT_MODE);
+  mode(IOPin::OUTPUT_MODE);
   return (res);
 }
 
@@ -254,10 +252,10 @@ TWI::request(uint8_t op)
   int count = 0;
 
   // Send start condition and write address
-  if (!start()) return (-1);
+  if (!start()) return (EFAULT);
   m_scl.clear();
   transfer(m_dev->m_addr | is_read);
-  set_mode(IOPin::INPUT_MODE);
+  mode(IOPin::INPUT_MODE);
   if (transfer(0, 1)) goto nack;
 
   // Read or write data
@@ -265,57 +263,61 @@ TWI::request(uint8_t op)
     while (next != last) {
       count += 1;
       if (is_read) {
-	set_mode(IOPin::INPUT_MODE);
+	mode(IOPin::INPUT_MODE);
 	*next++ = transfer(0);
 	transfer((next != last) ? 0x00 : 0xff, 1);
       }
       else {
 	m_scl.clear();
 	transfer(*next++);
-	set_mode(IOPin::INPUT_MODE);
+	mode(IOPin::INPUT_MODE);
 	if (transfer(0, 1)) goto nack;
       }
     }
     next = (uint8_t*) m_vec[ix].buf;
     last = next + m_vec[ix].size;
   }
-  
+
  nack:
-  if (!stop()) return (-1);
+  if (!stop()) return (EFAULT);
   return (count);
 }
 
 void
-TWI::begin(TWI::Driver* dev, Event::Handler* target)
+TWI::acquire(TWI::Driver* dev)
 {
   // Acquire the device driver. Wait is busy. Synchronized update
-  uint8_t key = lock();
-  while (m_busy) {
-    unlock(key);
-    yield();
-    key = lock();
-  }
-  // Mark as busy
+  uint8_t key = lock(m_busy);
+
+  // Set the current device driver
   m_dev = dev;
-  m_target = target;
-  m_busy = true;
+
+  // Power up the module
+  powerup();
+
   // Release level data and init mode
   USIDR = 0xff;
   USICR = CR_INIT_MODE;
   USISR = SR_CLEAR_ALL;
-  set_mode(IOPin::OUTPUT_MODE);
+  mode(IOPin::OUTPUT_MODE);
   unlock(key);
 }
 
-void 
-TWI::end()
+void
+TWI::release()
 {
+  // Check if an asynchronious read/write was issued
+  if (UNLIKELY((m_dev == NULL) || (m_dev->is_async()))) return;
+
   // Put into idle state
   synchronized {
-    m_target = NULL;
     m_dev = NULL;
     m_busy = false;
+    USICR = 0;
   }
+
+  // Power down the module
+  powerdown();
 }
 
 int

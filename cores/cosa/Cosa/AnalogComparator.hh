@@ -9,12 +9,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * This file is part of the Arduino Che Cosa project.
  */
 
@@ -25,9 +25,9 @@
 #include "Cosa/Interrupt.hh"
 
 /**
- * Analog Comparator; compare input values on the positive pin AIN0 
- * and negative pin AIN1 or ADCn. Note: only one instance can be
- * active/enabled at a time.
+ * Analog Comparator; compare input values on the positive pin AIN0 (D6)
+ * and negative pin AIN1 (D7), bandgap voltage or ADCn. Note: only one
+ * instance can be active/enabled at a time.
  */
 class AnalogComparator : public Interrupt::Handler, public Event::Handler {
 public:
@@ -38,16 +38,17 @@ public:
   } __attribute__((packed));
 
   /**
-   * Construct analog comparator handler. Compare with AIN1.
+   * Construct analog comparator handler. Compare AIN0 (D6) with AIN1
+   * (D7) or bandgap voltage (1V1).
    * @param[in] mode comparator mode.
    */
-  AnalogComparator(Mode mode = ON_TOGGLE_MODE) :
+  AnalogComparator(Mode mode = ON_TOGGLE_MODE, bool bandgap = false) :
     m_mode(mode),
-    m_pin(AIN1)
+    m_pin(bandgap ? VBG : AIN1)
   {}
 
   /**
-   * Construct analog comparator handler. Compare with given 
+   * Construct analog comparator handler. Compare AIN0 (D6) with given
    * analog pin (ADCn).
    * @param[in] pin analog pin to compare with.
    * @param[in] mode comparator mode.
@@ -58,21 +59,26 @@ public:
   {}
 
   /**
-   * @override Interrupt::Handler
+   * @override{Interrupt::Handler}
    * Enable analog comparator handler.
+   * @note atomic
    */
   virtual void enable()
   {
     synchronized {
       s_comparator = this;
-      ADCSRB = _BV(ACME) | (m_pin == AIN1 ? _BV(ADEN) : m_pin);
-      ACSR = _BV(ACIE) | m_mode;
+      ADCSRB = (m_pin >= AIN1) ? 0 : (_BV(ACME) | m_pin);
+      if (m_pin == VBG)
+	ACSR = _BV(ACBG) | _BV(ACIE) | m_mode;
+      else
+	ACSR = _BV(ACIE) | m_mode;
     }
   }
 
   /**
-   * @override Interrupt::Handler
+   * @override{Interrupt::Handler}
    * Disable analog comparator handler.
+   * @note atomic
    */
   virtual void disable()
   {
@@ -83,7 +89,7 @@ public:
   }
 
   /**
-   * @override Interrupt::Handler
+   * @override{Interrupt::Handler}
    * Default interrupt service on comparator output rise, fall or toggle.
    * @param[in] arg argument from interrupt service routine.
    */
@@ -91,7 +97,8 @@ public:
 
 protected:
   static AnalogComparator* s_comparator; //!< Current comparator.
-  static const uint8_t AIN1 = 255;	 //!< Default reference voltage.
+  static const uint8_t AIN1 = 254;	 //!< Default reference voltage.
+  static const uint8_t VBG = 255;	 //!< Bandgap voltage reference.
   Mode m_mode;				 //!< Compare mode.
   uint8_t m_pin;			 //!< Analog channel.
 

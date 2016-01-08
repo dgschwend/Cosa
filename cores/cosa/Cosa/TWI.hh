@@ -3,18 +3,18 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2012-2014, Mikael Patel
+ * Copyright (C) 2012-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * This file is part of the Arduino Che Cosa project.
  */
 
@@ -26,12 +26,13 @@
 #include "Cosa/USI/TWI.hh"
 #else
 #include "Cosa/Event.hh"
+#include <avr/power.h>
 
 /**
  * Two wire library. Support for the I2C/TWI bus Master and Slave
  * device drivers. Single-ton, twi, holds bus interaction state.
  * Supporting classes TWI::Driver for device drivers, TWI::Slave
- * for slave devices. 
+ * for slave devices.
  *
  * @section Circuit
  * TWI slave circuit with internal pullup resistors (4K7). Note that
@@ -41,7 +42,7 @@
  *                       +------------+
  * (A4/SDA)------------1-|SDA         |
  * (A5/SCL)------------2-|SCL         |
- * (EXTn)--------------3-|IRQ(opt)    |
+ * (EXTn/PCIn)---------3-|IRQ(opt)    |
  * (VCC)---------------4-|VCC         |
  * (GND)---------------5-|GND         |
  *                       +------------+
@@ -52,24 +53,68 @@ public:
   /** Default Two-Wire Interface clock: 100 KHz. */
   static const uint32_t DEFAULT_FREQ = 100000L;
 
-  /** Max Two-Wire Interface clock: 444.444 KHz @ 16 MHz. */
-  static const uint32_t MAX_FREQ = (F_CPU / (16 + 2*10));
+  /** Max Two-Wire Interface clock: 800 KHz @ 16 MHz. */
+  static const uint32_t MAX_FREQ = (F_CPU / (16 + 2*2));
 
   /**
-   * Device drivers are friends and may have callback/event handler
-   * for completion events. 
+   * TWI Device Driver support class. Holds the address of the
+   * device. Should be sub-classed to implement a device driver and
+   * access functions.
    */
-  class Driver : public Event::Handler {
+  class Driver {
   public:
     /**
      * Construct TWI driver with given bus address.
      * @param[in] addr bus address (7-bit LSB).
      */
-   Driver(uint8_t addr) : Event::Handler(), m_addr(addr << 1) {}
+   Driver(uint8_t addr) :
+     m_addr(addr << 1),
+     m_async(false)
+    {}
+
+    /**
+     * Return true(1) if the request is asyncrhonous otherwise false(0).
+     */
+    bool is_async() const
+    {
+      return (m_async);
+    }
+
+    /**
+     * Set synchronous request mode.
+     */
+    void sync_request()
+    {
+      m_async = false;
+    }
+
+    /**
+     * Set asynchronous request mode.
+     */
+    void async_request()
+    {
+      m_async = true;
+    }
+
+    /**
+     * @override{TWI::Driver}
+     * Service completion callback when a read/write has been
+     * completed.
+     * @param[in] type event code.
+     * @param[in] count number of bytes in request.
+     */
+    virtual void on_completion(uint8_t type, int count)
+    {
+      UNUSED(type);
+      UNUSED(count);
+    }
 
   protected:
     /** Device bus address. */
-    int8_t m_addr;
+    uint8_t m_addr;
+
+    /** Asynchronious mode. */
+    bool m_async;
 
     /** Allow access. */
     friend class TWI;
@@ -81,39 +126,51 @@ public:
    * response and handle incoming requests. See also USI/TWI.hh for
    * definition for ATtiny devices.
    */
-  class Slave : public Driver {
+  class Slave : public Driver, public Event::Handler {
   public:
     /**
      * Construct slave with given address.
      * @param[in] addr slave address.
      */
-    Slave(uint8_t addr) : Driver(addr) {}
+    Slave(uint8_t addr) : Driver(addr), Event::Handler() {}
 
     /**
      * Set read (result) buffer. Must be called before starting TWI.
      * @param[in] buf buffer pointer.
      * @param[in] size of buffer.
      */
-    void set_read_buf(void* buf, size_t size);
+    void read_buf(void* buf, size_t size);
 
     /**
      * Set write (argument) buffer. Must be called before starting TWI.
      * @param[in] buf buffer pointer.
      * @param[in] size of buffer.
      */
-    void set_write_buf(void* buf, size_t size);
-    
+    void write_buf(void* buf, size_t size);
+
     /**
-     * Start TWI bus logic for the slave device. 
+     * Start TWI bus logic for the slave device.
      */
     void begin();
 
     /**
-     * @override TWI::Slave
+     * @override{TWI::Driver}
+     * Service completion callback when a read/write has been
+     * completed.
+     * @param[in] type event code.
+     * @param[in] count number of bytes in request.
+     */
+    virtual void on_completion(uint8_t type, int count)
+    {
+      Event::push(type, this, count);
+    }
+
+    /**
+     * @override{TWI::Slave}
      * Service request callback when a write has been completed, i.e.,
      * an argument block as been written. Must be defined by sub-class.
-     * Must handle write-read and write-write sequences. The device will 
-     * become ready after the completion of the function. 
+     * Must handle write-read and write-write sequences. The device will
+     * become ready after the completion of the function.
      * @param[in] buf buffer pointer.
      * @param[in] size of buffer.
      */
@@ -127,7 +184,7 @@ public:
     static const uint8_t READ_IX = 1;
 
     /**
-     * @override Event::Handler
+     * @override{Event::Handler}
      * Filter Event::WRITE_COMPLETED_TYPE(size) and calls on_request()
      * with given write block as argument. The device is marked as ready
      * when the request has been completed and a possible result block
@@ -141,13 +198,12 @@ public:
     friend class TWI;
     friend void TWI_vect(void);
   };
-  
-  /** 
+
+  /**
    * Construct two-wire instance. This is actually a single-ton on
    * current supported hardware, i.e. there can only be one unit.
    */
   TWI() :
-    m_target(NULL),
     m_state(IDLE_STATE),
     m_status(NO_INFO),
     m_ix(0),
@@ -165,83 +221,83 @@ public:
   }
 
   /**
-   * Start TWI logic for a device transaction block. Use given event
-   * handler for completion events. 
+   * Start TWI logic for a device transaction block. Wait until TWI
+   * hardware can be acquired. The given device driver becomes the
+   * current driver for addressing, read and write requests.
    * @param[in] dev device.
-   * @param[in] target receiver of events on requests (default NULL).
-   * @return true(1) if successful otherwise false(0).
    */
-  void begin(TWI::Driver* dev, Event::Handler* target = NULL);
+  void acquire(TWI::Driver* dev);
 
   /**
-   * Stop usage of the TWI bus logic. 
+   * Release TWI hardware and bus.
    */
-  void end();
+  void release();
 
   /**
    * Issue a write data request to the current driver. Return
-   * true(1) if successful otherwise(0). 
-   * @param[in] buf data to write.
-   * @param[in] size number of bytes to write.
-   * @return bool
+   * true(1) if successful otherwise false(0).
+   * @param[in] buf pointer to buffer.
+   * @param[in] size number of bytes.
+   * @return bool.
    */
   bool write_request(void* buf, size_t size);
 
   /**
    * Issue a write data request to the current driver with given
-   * byte header/command. Return true(1) if successful otherwise(0).
+   * byte header/command. Return true(1) if successful otherwise
+   * false(0).
    * @param[in] header to write before buffer.
-   * @param[in] buf data to write.
-   * @param[in] size number of bytes to write.
-   * @return bool
+   * @param[in] buf pointer to buffer.
+   * @param[in] size number of bytes.
+   * @return bool.
    */
   bool write_request(uint8_t header, void* buf, size_t size);
 
   /**
    * Issue a write data request to the current driver with given
-   * header/command. Return true(1) if successful otherwise(0).
+   * header/command. Return true(1) if successful otherwise false(0).
    * @param[in] header to write before buffer.
-   * @param[in] buf data to write.
-   * @param[in] size number of bytes to write.
-   * @return bool
+   * @param[in] buf pointer to buffer.
+   * @param[in] size number of bytes.
+   * @return bool.
    */
   bool write_request(uint16_t header, void* buf, size_t size);
 
   /**
    * Issue a read data request to the current driver. Return true(1)
-   * if successful otherwise(0). 
-   * @param[in] buf data to read.
-   * @param[in] size number of bytes to read.
-   * @return number of bytes
+   * if successful otherwise false(0).
+   * @param[in] buf pointer to buffer.
+   * @param[in] size number of bytes.
+   * @return bool.
    */
   bool read_request(void* buf, size_t size);
 
   /**
    * Write data to the current driver. Returns number of bytes
    * written or negative error code.
-   * @param[in] buf data to write.
-   * @param[in] size number of bytes to write.
-   * @return number of bytes
+   * @param[in] buf pointer to buffer.
+   * @param[in] size number of bytes.
+   * @return number of bytes or negative error code.
    */
   int write(void* buf, size_t size)
     __attribute__((always_inline))
   {
-    if (!write_request(buf, size)) return (-1);
+    if (UNLIKELY(!write_request(buf, size))) return (EIO);
     return (await_completed());
   }
 
   /**
    * Write data to the current driver with given byte header. Returns
-   * number of bytes written or negative error code. 
+   * number of bytes written or negative error code.
    * @param[in] header to write before buffer.
-   * @param[in] buf data to write.
-   * @param[in] size number of bytes to write.
-   * @return number of bytes
+   * @param[in] buf pointer to buffer.
+   * @param[in] size number of bytes.
+   * @return number of bytes or negative error code.
    */
   int write(uint8_t header, void* buf = 0, size_t size = 0)
     __attribute__((always_inline))
   {
-    if (!write_request(header, buf, size)) return (-1);
+    if (UNLIKELY(!write_request(header, buf, size))) return (EIO);
     return (await_completed());
   }
 
@@ -249,47 +305,63 @@ public:
    * Write data to the current driver with given header. Returns
    * number of bytes written or negative error code.
    * @param[in] header to write before buffer.
-   * @param[in] buf data to write.
-   * @param[in] size number of bytes to write.
-   * @return number of bytes
+   * @param[in] buf pointer to buffer.
+   * @param[in] size number of bytes.
+   * @return number of bytes or negative error code.
    */
   int write(uint16_t header, void* buf = 0, size_t size = 0)
     __attribute__((always_inline))
   {
-    if (!write_request(header, buf, size)) return (-1);
+    if (UNLIKELY(!write_request(header, buf, size))) return (EIO);
     return (await_completed());
   }
 
   /**
    * Read data to the current driver. Returns number of bytes read or
-   * negative error code. 
-   * @param[in] buf data to write.
-   * @param[in] size number of bytes to read.
-   * @return number of bytes
+   * negative error code.
+   * @param[in] buf pointer to buffer.
+   * @param[in] size number of bytes.
+   * @return number of bytes or negative error code.
    */
   int read(void* buf, size_t size)
     __attribute__((always_inline))
   {
-    if (!read_request(buf, size)) return (-1);
+    if (UNLIKELY(!read_request(buf, size))) return (EIO);
     return (await_completed());
   }
 
   /**
-   * Await issued request to complete. Returns number of bytes 
-   * or negative error code.
+   * Await issued request to complete. Returns number of bytes
+   * read/written or negative error code.
+   * @return number of bytes or negative error code.
    */
   int await_completed();
 
   /**
    * Set bus frequency for device access. Does not adjust for
    * cpu frequency scaling. Compile-time cpu frequency used.
-   * Should be called before starting the device driver; begin().
    * @param[in] hz bus frequency.
    */
   void set_freq(uint32_t hz)
     __attribute__((always_inline))
   {
-    m_freq = (hz < MAX_FREQ) ? (((F_CPU / hz) - 16) / 2) : 10;
+    m_freq = (hz < MAX_FREQ) ? (((F_CPU / hz) - 16) / 2) : 2;
+  }
+
+  /**
+   * Powerup TWI hardware.
+   */
+  void powerup()
+  {
+    power_twi_enable();
+  }
+
+  /**
+   * Powerdown TWI hardware.
+   */
+  void powerdown()
+  {
+    power_twi_disable();
   }
 
 private:
@@ -388,7 +460,6 @@ private:
   static const uint8_t VEC_MAX = 4;
   uint8_t m_header[HEADER_MAX];
   iovec_t m_vec[VEC_MAX];
-  Event::Handler* m_target;
   volatile State m_state;
   volatile uint8_t m_status;
   volatile uint8_t m_ix;
@@ -399,7 +470,7 @@ private:
   Driver* m_dev;
   uint8_t m_freq;
   volatile bool m_busy;
-  
+
   /**
    * Start block transfer. Setup internal buffer pointers.
    * Part of the TWI ISR state machine.
@@ -435,7 +506,7 @@ private:
 
   /**
    * Initiate a request to the device. Return true(1) if successful
-   * otherwise false(0).  
+   * otherwise false(0).
    * @param[in] op slave operation.
    * @return bool
    */
@@ -451,4 +522,3 @@ private:
 */
 extern TWI twi;
 #endif
-

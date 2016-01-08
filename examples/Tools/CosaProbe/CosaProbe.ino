@@ -3,18 +3,18 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2013, Mikael Patel
+ * Copyright (C) 2013-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * @section Description
  * Probe to sample pulse sequence for analysis.
  *
@@ -23,10 +23,10 @@
 
 #include "Cosa/Types.h"
 #include "Cosa/ExternalInterrupt.hh"
-#include "Cosa/RTC.hh"
+#include "Cosa/RTT.hh"
 #include "Cosa/Power.hh"
 #include "Cosa/Watchdog.hh"
-#include "Cosa/IOStream/Driver/UART.hh"
+#include "Cosa/UART.hh"
 #include "Cosa/Trace.hh"
 
 /**
@@ -44,16 +44,16 @@ private:
   volatile uint8_t m_sampling;
   volatile uint16_t m_start;
   volatile uint8_t m_ix;
-  
+
   const uint16_t LOW_THRESHOLD;
   const uint16_t HIGH_THRESHOLD;
 
   virtual void on_interrupt(uint16_t arg = 0);
 
 public:
-  Probe(Board::ExternalInterruptPin pin, 
+  Probe(Board::ExternalInterruptPin pin,
 	ExternalInterrupt::InterruptMode mode,
-	uint16_t low, uint16_t high) : 
+	uint16_t low, uint16_t high) :
     ExternalInterrupt(pin, mode),
     m_sampling(false),
     m_start(0L),
@@ -75,28 +75,28 @@ IOStream& operator<<(IOStream& outs, Probe& probe)
   return (outs);
 }
 
-void 
-Probe::on_interrupt(uint16_t arg) 
-{ 
+void
+Probe::on_interrupt(uint16_t arg)
+{
   UNUSED(arg);
   if (m_start == 0) {
-    m_start = RTC::micros();
+    m_start = RTT::micros();
     m_ix = 0;
     return;
   }
-  uint16_t stop = RTC::micros();
+  uint16_t stop = RTT::micros();
   uint16_t us = (stop - m_start);
   m_start = stop;
   m_sample[m_ix++] = us;
   if (us < LOW_THRESHOLD || us > HIGH_THRESHOLD) goto exception;
   if (m_ix != SAMPLE_MAX) return;
-  
+
  exception:
   m_sampling = false;
   disable();
 }
 
-void 
+void
 Probe::sample_request()
 {
   m_sampling = true;
@@ -107,11 +107,11 @@ Probe::sample_request()
 void
 Probe::sample_await(uint32_t ms)
 {
-  uint32_t start = RTC::millis();
+  uint32_t start = RTT::millis();
   DELAY(HIGH_THRESHOLD);
-  while (m_sampling && (RTC::since(start) < ms)) {
+  while (m_sampling && (RTT::since(start) < ms)) {
     Power::sleep(SLEEP_MODE_IDLE);
-    uint16_t us = (RTC::micros() - m_start);
+    uint16_t us = (RTT::micros() - m_start);
     if (us > 1000) break;
   }
   disable();
@@ -126,7 +126,7 @@ void setup()
   uart.begin(9600);
   trace.begin(&uart, PSTR("CosaProbe: started"));
   Watchdog::begin();
-  RTC::begin();
+  RTT::begin();
 }
 
 void loop()
@@ -134,11 +134,11 @@ void loop()
   sleep(2);
 
   // Make a request (DHT)
-  probe.set_mode(IOPin::OUTPUT_MODE);
+  probe.mode(IOPin::OUTPUT_MODE);
   probe.clear();
   Watchdog::delay(32);
   probe.set();
-  probe.set_mode(IOPin::INPUT_MODE);
+  probe.mode(IOPin::INPUT_MODE);
   DELAY(40);
 
   // Wait for the response max 100 ms

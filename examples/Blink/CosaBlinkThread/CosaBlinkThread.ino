@@ -3,18 +3,18 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2014, Mikael Patel
+ * Copyright (C) 2014-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * @section Description
  * Demonstration of Cosa Nucleo Threads; Blink LED with thread
  * delay and use an additional thread to control the LED blink
@@ -27,9 +27,10 @@
  * This file is part of the Arduino Che Cosa project.
  */
 
+#include <Nucleo.h>
+
 #include "Cosa/OutputPin.hh"
 #include "Cosa/Watchdog.hh"
-#include "Cosa/Nucleo/Thread.hh"
 
 // This class is a thread that turns a LED on and off given a
 // delay period. The delay may be changed dynamically.
@@ -42,6 +43,7 @@ public:
   class Controller : public Nucleo::Thread {
   public:
     Controller(LED* led) : Thread(), m_led(led) {}
+
     virtual void run()
     {
       for (uint16_t ms = LOW; ms < HIGH; ms += INC) {
@@ -53,13 +55,25 @@ public:
 	delay(PERIOD);
       }
     }
+
   private:
     LED* m_led;
   };
-  
-  LED(Board::DigitalPin pin) : Thread(), m_pin(pin, 1), m_delay(200) {}
-  void set_delay(uint16_t ms) { m_delay = ms; }
-  virtual void run() { m_pin.toggle(); delay(m_delay); }
+
+  LED(Board::DigitalPin pin) : Thread(), m_pin(pin, 0), m_delay(200) {}
+
+  void set_delay(uint16_t ms)
+  {
+    m_delay = ms;
+  }
+
+  virtual void run()
+  {
+    m_pin.toggle();
+    delay(10);
+    m_pin.toggle();
+    delay(m_delay);
+  }
 
 private:
   OutputPin m_pin;
@@ -82,4 +96,10 @@ void setup()
 
   // Start the threads
   Nucleo::Thread::begin();
+}
+
+void loop()
+{
+ // Service the nucleos
+  Nucleo::Thread::service();
 }

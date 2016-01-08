@@ -3,18 +3,18 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2013-2014, Mikael Patel
+ * Copyright (C) 2013-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * This file is part of the Arduino Che Cosa project.
  */
 
@@ -36,7 +36,7 @@ IOStream& operator<<(IOStream& outs, const time_t& t)
   return (outs);
 }
 
-bool 
+bool
 time_t::parse(str_P s)
 {
   static size_t BUF_MAX = 32;
@@ -45,28 +45,28 @@ time_t::parse(str_P s)
   char* sp = &buf[0];
   uint16_t value = strtoul(sp, &sp, 10);
 
-  if (*sp != '-') return false;
+  if (UNLIKELY(*sp != '-')) return false;
   year = value % 100;
-  if (full_year() != value) return false;
+  if (UNLIKELY(full_year() != value)) return false;
 
   value = strtoul(sp + 1, &sp, 10);
-  if (*sp != '-') return false;
+  if (UNLIKELY(*sp != '-')) return false;
   month = value;
 
   value = strtoul(sp + 1, &sp, 10);
-  if (*sp != ' ') return false;
+  if (UNLIKELY(*sp != ' ')) return false;
   date = value;
 
   value = strtoul(sp + 1, &sp, 10);
-  if (*sp != ':') return false;
+  if (UNLIKELY(*sp != ':')) return false;
   hours = value;
 
   value = strtoul(sp + 1, &sp, 10);
-  if (*sp != ':') return false;
+  if (UNLIKELY(*sp != ':')) return false;
   minutes = value;
 
   value = strtoul(sp + 1, &sp, 10);
-  if (*sp != 0) return false;
+  if (UNLIKELY(*sp != 0)) return false;
   seconds = value;
 
   set_day();
@@ -91,7 +91,7 @@ time_t::time_t(clock_t c, int8_t zone)
 
   uint16_t y = epoch_year();
   for (;;) {
-    uint16_t days = days_per( y );
+    uint16_t days = days_per(y);
     if (dayno < days) break;
     dayno -= days;
     y++;
@@ -172,14 +172,14 @@ void time_t::use_fastest_epoch()
 
   // Temporarily set a Y2K epoch so we can figure out the day for
   // January 1 of this year
-  epoch_year( Y2K_EPOCH_YEAR );
+  epoch_year(Y2K_EPOCH_YEAR);
   epoch_weekday = Y2K_EPOCH_WEEKDAY;
   time_t this_year(0);
   this_year.year = compile_year % 100;
   this_year.set_day();
   uint8_t compile_weekday = this_year.day;
 
-  time_t::epoch_year( compile_year );
+  time_t::epoch_year(compile_year);
   time_t::epoch_weekday = compile_weekday;
   time_t::pivot_year = this_year.year;
 }

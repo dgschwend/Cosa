@@ -3,18 +3,18 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2012-2014, Mikael Patel
+ * Copyright (C) 2012-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * This file is part of the Arduino Che Cosa project.
  */
 
@@ -23,7 +23,6 @@
 #if !defined(BOARD_ATTINY)
 
 #include "Cosa/Bits.h"
-#include "Cosa/Power.hh"
 
 TWI twi  __attribute__ ((weak));
 
@@ -34,21 +33,20 @@ TWI twi  __attribute__ ((weak));
 #endif
 
 void
-TWI::begin(TWI::Driver* dev, Event::Handler* target)
+TWI::acquire(TWI::Driver* dev)
 {
   // Acquire the device driver. Wait is busy. Synchronized update
-  uint8_t key = lock();
-  while (m_busy) {
-    unlock(key);
-    yield();
-    key = lock();
-  }
-  // Mark as busy
+  uint8_t key = lock(m_busy);
+
+  // Set the current device driver
   m_dev = dev;
-  m_target = target;
-  m_busy = true;
+
+  // Power up the module
+  powerup();
+
   // Enable internal pullup
   bit_mask_set(PORT, _BV(Board::SDA) | _BV(Board::SCL));
+
   // Set clock prescale and bit rate
   bit_mask_clear(TWSR, _BV(TWPS0) | _BV(TWPS1));
   TWBR = m_freq;
@@ -57,30 +55,34 @@ TWI::begin(TWI::Driver* dev, Event::Handler* target)
 }
 
 void
-TWI::end()
+TWI::release()
 {
-  // Check if an asynchronious read/write was issued 
-  if (m_target != NULL) await_completed();
+  // Check if an asynchronious read/write was issued
+  if (UNLIKELY((m_dev == NULL) || (m_dev->is_async()))) return;
+
   // Put into idle state
   synchronized {
-    m_target = NULL;
     m_dev = NULL;
     m_busy = false;
     TWCR = 0;
   }
+
+  // Power down the module
+  powerdown();
 }
 
 bool
 TWI::request(uint8_t op)
 {
   // Setup buffer pointers
-  m_state = (op == READ_OP) ? MR_STATE : MT_STATE;
+  m_state = ((op == READ_OP) ? MR_STATE : MT_STATE);
   m_addr = (m_dev->m_addr | op);
   m_status = NO_INFO;
   m_next = (uint8_t*) m_vec[0].buf;
   m_last = m_next + m_vec[0].size;
   m_ix = 0;
   m_count = 0;
+
   // And issue start command
   TWCR = START_CMD;
   return (true);
@@ -134,7 +136,7 @@ TWI::await_completed()
   return (m_count);
 }
 
-void 
+void
 TWI::isr_start(State state, uint8_t ix)
 {
   if (ix == NEXT_IX) {
@@ -147,21 +149,27 @@ TWI::isr_start(State state, uint8_t ix)
   m_state = state;
 }
 
-void 
+void
 TWI::isr_stop(State state, uint8_t type)
 {
   TWCR = TWI::STOP_CMD;
   loop_until_bit_is_clear(TWCR, TWSTO);
-  if (state == TWI::ERROR_STATE) m_count = -1;
+  if (UNLIKELY(state == TWI::ERROR_STATE)) m_count = -1;
   m_state = state;
-  if (type != Event::NULL_TYPE && m_target != NULL)
-    Event::push(type, m_target, m_count);
+
+  // Check for asynchronous mode and call completion callback
+  if (m_dev->is_async() || m_status == SR_STOP) {
+    m_dev->on_completion(type, m_count);
+    m_dev = NULL;
+    m_busy = false;
+    TWCR = 0;
+  }
 }
 
 bool
 TWI::isr_write(Command cmd)
 {
-  if (m_next == m_last) return (false);
+  if (UNLIKELY(m_next == m_last)) return (false);
   TWDR = *m_next++;
   TWCR = cmd;
   m_count += 1;
@@ -171,14 +179,14 @@ TWI::isr_write(Command cmd)
 bool
 TWI::isr_read(Command cmd)
 {
-  if (m_next == m_last) return (false);
+  if (UNLIKELY(m_next == m_last)) return (false);
   *m_next++ = TWDR;
   m_count += 1;
   if (cmd != 0) TWCR = cmd;
   return (true);
 }
 
-ISR(TWI_vect) 
+ISR(TWI_vect)
 {
   twi.m_status = TWI_STATUS(TWSR);
   switch (twi.m_status) {
@@ -197,7 +205,7 @@ ISR(TWI_vect)
     twi.m_state = TWI::ERROR_STATE;
     twi.m_count = -1;
     break;
-    
+
     /**
      * Master Transmitter Mode
      */
@@ -205,10 +213,10 @@ ISR(TWI_vect)
   case TWI::MT_DATA_ACK:
     if (twi.m_next == twi.m_last) twi.isr_start(TWI::MT_STATE, TWI::NEXT_IX);
     if (twi.isr_write(TWI::DATA_CMD)) break;
-  case TWI::MT_DATA_NACK: 
+  case TWI::MT_DATA_NACK:
     twi.isr_stop(TWI::IDLE_STATE, Event::WRITE_COMPLETED_TYPE);
     break;
-  case TWI::MT_SLA_NACK: 
+  case TWI::MT_SLA_NACK:
     twi.isr_stop(TWI::ERROR_STATE, Event::ERROR_TYPE);
     break;
 
@@ -219,12 +227,12 @@ ISR(TWI_vect)
     twi.isr_read();
   case TWI::MR_SLA_ACK:
     TWCR = (twi.m_next < (twi.m_last - 1)) ? TWI::ACK_CMD : TWI::NACK_CMD;
-    break; 
+    break;
   case TWI::MR_DATA_NACK:
     twi.isr_read();
     twi.isr_stop(TWI::IDLE_STATE, Event::READ_COMPLETED_TYPE);
     break;
-  case TWI::MR_SLA_NACK: 
+  case TWI::MR_SLA_NACK:
     twi.isr_stop(TWI::ERROR_STATE, Event::ERROR_TYPE);
     break;
 
@@ -269,19 +277,18 @@ ISR(TWI_vect)
   case TWI::NO_INFO:
     break;
 
-  case TWI::BUS_ERROR: 
+  case TWI::BUS_ERROR:
     twi.isr_stop(TWI::ERROR_STATE);
     break;
-    
-  default:     
-    TWCR = TWI::IDLE_CMD; 
+
+  default:
+    TWCR = TWI::IDLE_CMD;
   }
 }
 
 void
 TWI::Slave::begin()
 {
-  twi.m_target = this;
   twi.m_dev = this;
   synchronized {
     TWAR = m_addr;
@@ -291,25 +298,25 @@ TWI::Slave::begin()
   }
 }
 
-void 
+void
 TWI::Slave::on_event(uint8_t type, uint16_t value)
 {
-  if (type != Event::WRITE_COMPLETED_TYPE) return;
+  if (UNLIKELY(type != Event::WRITE_COMPLETED_TYPE)) return;
   void* buf = twi.m_vec[WRITE_IX].buf;
   size_t size = value;
   on_request(buf, size);
   TWAR = twi.m_dev->m_addr;
 }
 
-void 
-TWI::Slave::set_write_buf(void* buf, size_t size)
+void
+TWI::Slave::write_buf(void* buf, size_t size)
 {
   twi.m_vec[WRITE_IX].buf = buf;
   twi.m_vec[WRITE_IX].size = size;
 }
 
-void 
-TWI::Slave::set_read_buf(void* buf, size_t size)
+void
+TWI::Slave::read_buf(void* buf, size_t size)
 {
   twi.m_vec[READ_IX].buf = buf;
   twi.m_vec[READ_IX].size = size;

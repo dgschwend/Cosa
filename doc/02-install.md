@@ -1,12 +1,35 @@
 # How to install Cosa?
 
+## Via Arduino IDE Boards Manager
+
+* Add the URL to the Cosa package definition file to the Arduino IDE
+Preferences>Additional Boards Manager URLs field.
+https://raw.githubusercontent.com/mikaelpatel/Cosa/master/package_cosa_index.json
+
+* Open the Arduino IDE Boards Manager in the Tools>Board menu.
+
+* Select Cosa and install.
+
+
 ## Via GIT
 
+For Arduino 1.0.X:
 ```shell
 cd <custom_path>/sketchbook
-mkdir hardware # Create the hardware folder if missing
+mkdir hardware
 cd hardware
 git clone https://github.com/mikaelpatel/Cosa.git
+```
+
+For Arduino 1.5.x and higher an extra avr directory level is needed:
+```shell
+cd <custom_path>/sketchbook
+mkdir hardware
+cd hardware
+mkdir Cosa
+cd Cosa
+git clone https://github.com/mikaelpatel/Cosa.git
+mv Cosa avr
 ```
 
 Then you can update the library by using:
@@ -24,11 +47,14 @@ git pull origin master
 * Unzip the files to your hardware folder.
 * Rename `Cosa-master` to `Cosa`.
 
-### Step 2 (For Arduino 1.5.x only)    
+### Step 2 (For Arduino 1.5.x and 1.6.x only)
 
 * Create an outer `Cosa` folder (<custom_path>/sketchbook/hardware/Cosa).
 * Unzip the files to your `hardware/Cosa` folder.
 * Rename inner `Cosa` folder (<custom_path>/sketchbook/hardware/Cosa/Cosa-master) to `avr` (<custom_path>/sketchbook/hardware/Cosa/avr).
+* Arduino 1.6.1 does not include the GCC plugin for link time
+optimization (LTO). Please rename the file platform.txt-windows-1.6.1
+to platform.txt if using 1.6.1 on Windows.
 
 ### Step 3 (For Attiny users on Windows version only and Arduino 1.0.X)
 
@@ -39,28 +65,19 @@ set the fuse bits, before using the device for the first time.
 
 ### Step 4
 
-* Restart the Arduino IDE and Cosa will show up as a number of boards and example sketches.  
+* Restart the Arduino IDE and Cosa will show up as a number of boards and example sketches.
 
 ## Latest AVR Toolchain
 
 The new AVR toolchain with gcc 4.8.1 is supported. There is also a
 platform definition file with link-time optimization enabled. This may
 be used to reduce memory foot-print (program size) and increase
-performance. 
+performance.
 
 ## Run your first sketch.
 
 * Open the CosaBlink example sketch in the Sketchbook>hardware>Cosa>avr>Blink menu.
-* Select your board in the Tools>Board menu.
-* Compile and download.
+* Select your board in the Tools>Board menu. Use the board with prefix
+"Cosa" to get the right build settings.
+* Compile and upload.
 
-## Download Versions
-
-* 2014-07-29
-  [source](https://dl.dropboxusercontent.com/u/993383/Cosa/download/Cosa-2014-07-29-src.zip)
-  and
-  [documentation](https://dl.dropboxusercontent.com/u/993383/Cosa/download/Cosa-2014-07-29-doc.zip) 
-* 2014-09-05
-  [source](https://dl.dropboxusercontent.com/u/993383/Cosa/download/Cosa-2014-09-05-src.zip)
-  and
-  [documentation](https://dl.dropboxusercontent.com/u/993383/Cosa/download/Cosa-2014-09-05-doc.zip) 

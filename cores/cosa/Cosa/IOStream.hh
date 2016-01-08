@@ -3,18 +3,18 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2012-2014, Mikael Patel
+ * Copyright (C) 2012-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * This file is part of the Arduino Che Cosa project.
  */
 
@@ -36,7 +36,7 @@ public:
   static const char CR[] PROGMEM;
   static const char LF[] PROGMEM;
   static const char CRLF[] PROGMEM;
-  
+
   /**
    * Base conversion.
    */
@@ -66,7 +66,7 @@ public:
      * Default constructor for IOStream devices. Initiate non-blocking and
      * CRLF end of line mode.
      */
-    Device() : 
+    Device() :
       m_blocking(false),
       m_eol(CR_MODE)
     {}
@@ -74,7 +74,7 @@ public:
     /**
      * Set non-blocking mode.
      */
-    void set_non_blocking()
+    void non_blocking()
     {
       m_blocking = false;
     }
@@ -82,7 +82,7 @@ public:
     /**
      * Set blocking mode.
      */
-    void set_blocking()
+    void blocking()
     {
       m_blocking = true;
     }
@@ -100,7 +100,7 @@ public:
      * Set end of line mode.
      * @param[in] mode for end of line.
      */
-    void set_eol(Mode mode)
+    void eol(Mode mode)
     {
       m_eol = mode;
     }
@@ -109,27 +109,27 @@ public:
      * Get end of line mode.
      * @return mode.
      */
-    Mode get_eol() const
+    Mode eol() const
     {
       return (m_eol);
     }
 
     /**
-     * @override IOStream::Device
+     * @override{IOStream::Device}
      * Number of bytes available (possible to read).
      * @return bytes.
      */
     virtual int available();
 
     /**
-     * @override IOStream::Device
+     * @override{IOStream::Device}
      * Number of bytes room (write without blocking).
      * @return bytes.
      */
     virtual int room();
 
     /**
-     * @override IOStream::Device
+     * @override{IOStream::Device}
      * Write character to device.
      * @param[in] c character to write.
      * @return character written or EOF(-1).
@@ -137,7 +137,7 @@ public:
     virtual int putchar(char c);
 
     /**
-     * @override IOStream::Device
+     * @override{IOStream::Device}
      * Write null terminated string to device. Terminating
      * null is not written.
      * @param[in] s string to write.
@@ -146,34 +146,34 @@ public:
     virtual int puts(const char* s);
 
     /**
-     * @override IOStream::Device
+     * @override{IOStream::Device}
      * Write null terminated string from program memory to device.
      * Terminating null is not written.
      * @param[in] s string in program memory to write.
      * @return zero(0) or negative error code.
      */
-    virtual int puts_P(str_P s);
+    virtual int puts(str_P s);
 
     /**
-     * @override IOStream::Device
+     * @override{IOStream::Device}
      * Write data from buffer with given size to device.
      * @param[in] buf buffer to write.
      * @param[in] size number of bytes to write.
      * @return number of bytes written or EOF(-1).
      */
     virtual int write(const void* buf, size_t size);
-    
+
     /**
-     * @override IOStream::Device
+     * @override{IOStream::Device}
      * Write data from buffer in program memory with given size to device.
      * @param[in] buf buffer to write.
      * @param[in] size number of bytes to write.
      * @return number of bytes written or EOF(-1).
      */
     virtual int write_P(const void* buf, size_t size);
-    
+
     /**
-     * @override IOStream::Device
+     * @override{IOStream::Device}
      * Write data from buffers in null terminated io vector.
      * @param[in] vec io vector with buffers to write.
      * @return number of bytes written or EOF(-1).
@@ -181,30 +181,30 @@ public:
     virtual int write(const iovec_t* vec);
 
     /**
-     * @override IOStream::Device
+     * @override{IOStream::Device}
      * Peek at the next character from device.
      * @return character or EOF(-1).
      */
     virtual int peekchar();
-    
+
     /**
-     * @override IOStream::Device
-     * Peek for the given character in device buffer. Return number 
+     * @override{IOStream::Device}
+     * Peek for the given character in device buffer. Return number
      * of characters or EOF(-1).
      * @param[in] c character to peek for.
      * @return available or EOF(-1).
      */
     virtual int peekchar(char c);
-    
+
     /**
-     * @override IOStream::Device
+     * @override{IOStream::Device}
      * Read character from device.
      * @return character or EOF(-1).
      */
     virtual int getchar();
-    
+
     /**
-     * @override IOStream::Device
+     * @override{IOStream::Device}
      * Read string terminated by new-line or until size into given
      * string buffer. Returns pointer to string or NULL if empty line.
      * @param[in] s string buffer to read into.
@@ -214,7 +214,7 @@ public:
     virtual char* gets(char *s, size_t count);
 
     /**
-     * @override IOStream::Device
+     * @override{IOStream::Device}
      * Read data to given buffer with given size from device.
      * @param[in] buf buffer to read into.
      * @param[in] size number of bytes to read.
@@ -223,7 +223,7 @@ public:
     virtual int read(void* buf, size_t size);
 
     /**
-     * @override IOStream::Device
+     * @override{IOStream::Device}
      * Read data to given buffers in null terminated io vector.
      * @param[in] vec io vector with buffers to read into.
      * @return number of bytes read or EOF(-1).
@@ -231,14 +231,14 @@ public:
     virtual int read(iovec_t* vec);
 
     /**
-     * @override IOStream::Device
+     * @override{IOStream::Device}
      * Flush internal device buffers. Wait for device to become idle.
      * @return zero(0) or negative error code.
      */
     virtual int flush();
 
     /**
-     * @override IOStream::Device
+     * @override{IOStream::Device}
      * Empty internal device buffers.
      */
     virtual void empty();
@@ -248,7 +248,7 @@ public:
     bool m_blocking;
 
     /** End of line mode */
-    Mode m_eol; 
+    Mode m_eol;
   };
 
   /**
@@ -257,14 +257,14 @@ public:
    */
   IOStream(Device* dev);
   IOStream();
-  
+
   /**
    * Get current device.
    * @return device.
    */
-  Device* get_device() 
-  { 
-    return (m_dev); 
+  Device* device() const
+  {
+    return (m_dev);
   }
 
   /**
@@ -272,38 +272,43 @@ public:
    * @param[in] dev stream device.
    * @return previous device.
    */
-  Device* set_device(Device* dev);
-
-  /**
-   * Get io stream end of line string.
-   * @return string for end of line.
-   */
-  str_P get_eol_P()
+  Device* device(Device* dev)
   {
-    return (m_eol_P);
+    Device* previous = m_dev;
+    m_dev = dev;
+    return (previous);
   }
 
   /**
    * Get io stream end of line string.
    * @return string for end of line.
    */
-  str_P EOL()
+  str_P eol() const
   {
-    return (m_eol_P);
+    return (m_eols);
+  }
+
+  /**
+   * Get io stream end of line string.
+   * @return string for end of line.
+   */
+  str_P EOL() const
+  {
+    return (m_eols);
   }
 
   /**
    * Set io stream end of line string.
    * @param[in] s string for end of line.
    */
-  void set_eol_P(const char* s)
+  void eol(str_P s)
   {
-    m_eol_P = (str_P) s;
+    m_eols = s;
   }
 
   /**
    * Set minimum width for double numbers. The width is signed value,
-   * negative for left adjustment. 
+   * negative for left adjustment.
    * @param[in] value width.
    * @return previous width.
    */
@@ -375,7 +380,7 @@ public:
    * (including the '.' and the possible sign for negative values) is
    * given in width, and prec determines the number of digits after
    * the decimal sign. width is signed value, negative for left
-   * adjustment. 
+   * adjustment.
    * @param[in] value to print.
    * @param[in] width minimum field width.
    * @param[in] prec number of digits.
@@ -390,7 +395,7 @@ public:
    * @param[in] base to represent value in (default 10).
    * @param[in] max number of numbers per line (default 16).
    */
-  void print(uint32_t src, const void *ptr, size_t size, 
+  void print(uint32_t src, const void *ptr, size_t size,
 	     Base base = dec, uint8_t max = 16);
 
   /**
@@ -400,7 +405,7 @@ public:
    * @param[in] base to represent value in (default 10).
    * @param[in] max number of numbers per line (default 16).
    */
-  void print(const void *ptr, size_t size, 
+  void print(const void *ptr, size_t size,
 	     Base base = dec, uint8_t max = 16)
   {
     print((uint32_t) ptr, ptr, size, base, max);
@@ -410,55 +415,59 @@ public:
    * Print pointer as a hexadecimal number to stream.
    * @param[in] ptr pointer to data memory.
    */
-  void print(void *ptr) 
-  { 
-    print((unsigned int) ptr, hex); 
+  void print(void *ptr)
+  {
+    print((unsigned int) ptr, hex);
   }
 
   /**
-   * Print pointer to program memory as a hexadecimal number to 
+   * Print pointer to program memory as a hexadecimal number to
    * stream.
    * @param[in] ptr pointer to program memory.
    */
-  void print(const void *ptr) 
-  { 
-    print((unsigned int) ptr, hex); 
+  void print(const void *ptr)
+  {
+    print((unsigned int) ptr, hex);
   }
 
   /**
    * Print character to stream.
    * @param[in] c character to print.
    */
-  void print(char c) 
-  { 
-    m_dev->putchar(c); 
+  void print(char c)
+    __attribute__((always_inline))
+  {
+    if (m_dev != NULL) m_dev->putchar(c);
   }
 
   /**
    * Print string in data memory to stream.
    * @param[in] s pointer to data memory string.
    */
-  void print(const char* s) 
-  { 
-    m_dev->puts(s); 
+  void print(const char* s)
+    __attribute__((always_inline))
+  {
+    if (m_dev != NULL) m_dev->puts(s);
   }
 
   /**
-   * Print string in program memory to stream. Use macro PSTR() to generate 
+   * Print string in program memory to stream. Use macro PSTR() to generate
    * a string constants in program memory.
    * @param[in] s pointer to program memory string.
    */
-  void print_P(str_P s) 
-  { 
-    m_dev->puts_P(s); 
+  void print(str_P s)
+    __attribute__((always_inline))
+  {
+    if (m_dev != NULL) m_dev->puts(s);
   }
 
   /**
    * Print end of line to stream.
    */
-  void println() 
-  { 
-    m_dev->puts_P(m_eol_P);
+  void println()
+    __attribute__((always_inline))
+  {
+    if (m_dev != NULL) m_dev->puts(m_eols);
   }
 
   /**
@@ -467,7 +476,7 @@ public:
    * @param[in] format string in program memory.
    * @param[in] args variable argument list.
    */
-  void vprintf_P(str_P format, va_list args);
+  void vprintf(str_P format, va_list args);
 
   /**
    * Formated print with variable argument list. The format string
@@ -475,11 +484,11 @@ public:
    * @param[in] format string in program memory.
    * @param[in] ... variable argument list.
    */
-  void printf_P(str_P format, ...)
+  void printf(str_P format, ...)
   {
     va_list args;
     va_start(args, format);
-    vprintf_P(format, args);
+    vprintf(format, args);
     va_end(args);
   }
 
@@ -493,21 +502,22 @@ public:
    * Flush contents of iostream to stream.
    */
   void flush()
+    __attribute__((always_inline))
   {
-    m_dev->flush();
+    if (m_dev != NULL) m_dev->flush();
   }
 
   /**
    * Scan next token from the input stream. Returns pointer to string
-   * or NULL if not stream is empty. 
+   * or NULL if not stream is empty.
    * @param[in] s string buffer to read into.
    * @param[in] count max number of bytes to read.
    * @return string pointer or NULL.
    */
   char* scan(char *s, size_t count);
-  
+
   /**
-   * Read line into the given buffer. Characters received from the 
+   * Read line into the given buffer. Characters received from the
    * device is appended to the end of the string until end of line
    * is received. The buffer pointer is returned with a complete line
    * has been received otherwise NULL. The function will append until
@@ -533,8 +543,8 @@ public:
    * @return iostream.
    */
   IOStream& operator<<(Manipulator func)
-  { 
-    return (func(*this)); 
+  {
+    return (func(*this));
   }
 
   /**
@@ -543,9 +553,9 @@ public:
    * @param[in] n value to print.
    * @return iostream.
    */
-  IOStream& operator<<(int n) 
-  { 
-    print(n, m_base); 
+  IOStream& operator<<(int n)
+  {
+    print(n, m_base);
     m_base = dec;
     return (*this);
   }
@@ -557,10 +567,10 @@ public:
    * @return iostream.
    */
   IOStream& operator<<(long int n)
-  { 
-    print(n, m_base); 
+  {
+    print(n, m_base);
     m_base = dec;
-    return (*this); 
+    return (*this);
   }
 
   /**
@@ -571,10 +581,10 @@ public:
    * @return iostream.
    */
   IOStream& operator<<(double n)
-  { 
-    print(n, m_width, m_prec); 
+  {
+    print(n, m_width, m_prec);
     m_base = dec;
-    return (*this); 
+    return (*this);
   }
 
   /**
@@ -584,10 +594,10 @@ public:
    * @return iostream.
    */
   IOStream& operator<<(unsigned int n)
-  { 
-    print(n, m_base); 
+  {
+    print(n, m_base);
     m_base = dec;
-    return (*this); 
+    return (*this);
   }
 
   /**
@@ -597,10 +607,10 @@ public:
    * @return iostream.
    */
   IOStream& operator<<(unsigned long int n)
-  { 
-    print(n, m_base); 
+  {
+    print(n, m_base);
     m_base = dec;
-    return (*this); 
+    return (*this);
   }
 
   /**
@@ -608,24 +618,24 @@ public:
    * @param[in] ptr pointer to print.
    * @return iostream.
    */
-  IOStream& operator<<(void* ptr) 
-  { 
-    print(ptr); 
+  IOStream& operator<<(void* ptr)
+  {
+    print(ptr);
     m_base = dec;
-    return (*this); 
+    return (*this);
   }
 
   /**
-   * Print program memory pointer as a hexadecimal number 
+   * Print program memory pointer as a hexadecimal number
    * string to stream.
    * @param[in] ptr program memory pointer to print.
    * @return iostream.
    */
-  IOStream& operator<<(const void* ptr) 
-  { 
-    print(ptr); 
+  IOStream& operator<<(const void* ptr)
+  {
+    print(ptr);
     m_base = dec;
-    return (*this); 
+    return (*this);
   }
 
   /**
@@ -633,10 +643,10 @@ public:
    * @param[in] c character to print.
    * @return iostream.
    */
-  IOStream& operator<<(char c) 
-  { 
-    print(c); 
-    return (*this); 
+  IOStream& operator<<(char c)
+  {
+    print(c);
+    return (*this);
   }
 
   /**
@@ -644,10 +654,10 @@ public:
    * @param[in] s string to print.
    * @return iostream.
    */
-  IOStream& operator<<(char* s) 
-  { 
-    print(s); 
-    return (*this); 
+  IOStream& operator<<(char* s)
+  {
+    print(s);
+    return (*this);
   }
 
   /**
@@ -655,10 +665,10 @@ public:
    * @param[in] s string in program memory to print.
    * @return iostream.
    */
-  IOStream& operator<<(const char* s) 
-  { 
-    print(s); 
-    return (*this); 
+  IOStream& operator<<(const char* s)
+  {
+    print(s);
+    return (*this);
   }
 
   /**
@@ -668,20 +678,28 @@ public:
    */
   IOStream& operator<<(str_P s)
   {
-    print_P(s);
+    print(s);
     return (*this);
   }
-  
+
   /**
    * Print contents of iobuffer to stream.
    * @param[in] buffer input/output buffer.
    * @return iostream.
    */
-  IOStream& operator<<(IOStream& buffer) 
-  { 
+  IOStream& operator<<(IOStream& buffer)
+  {
     print(&buffer);
-    return (*this); 
+    return (*this);
   }
+
+#if !defined(COSA_IOSTREAM_STDLIB_DTOA)
+  /* Faster version of standard number to string conversion */
+  static char* ultoa(unsigned long __val, char *__s, int base);
+  static char* ltoa(long __val, char *__s, int base);
+  static char* utoa(unsigned int __val, char *__s, int base);
+  static char* itoa(int __val, char *__s, int base);
+#endif
 
   friend IOStream& bcd(IOStream& outs);
   friend IOStream& bin(IOStream& outs);
@@ -691,11 +709,14 @@ public:
   friend IOStream& flush(IOStream& outs);
 
 protected:
-  Device* m_dev;		//!< Delegated device.
-  Base m_base;			//!< Base for next output operator.
-  int8_t m_width;		//!< Minimum width of output string.
-  uint8_t m_prec;		//!< Number of digits after decimal sign.
-  str_P m_eol_P;		//!< End of line string (program memory).
+  Device* m_dev;	     //!< Delegated device.
+  Base m_base;		     //!< Base for next output operator.
+  int8_t m_width;	     //!< Minimum width of output string.
+  uint8_t m_prec;	     //!< Number of digits after decimal sign.
+  str_P m_eols;		     //!< End of line string (program memory).
+
+  /** Maximum size of required buffer for string conversion. */
+  static const size_t BUF_MAX = sizeof(uint32_t) * CHARBITS + 1;
 
   /**
    * Print number prefix for non decimal base.
@@ -709,7 +730,7 @@ protected:
  * @param[in] outs stream.
  * @return iostream.
  */
-inline IOStream& 
+inline IOStream&
 bcd(IOStream& outs)
 {
   outs.m_base = IOStream::bcd;
@@ -721,7 +742,7 @@ bcd(IOStream& outs)
  * @param[in] outs stream.
  * @return iostream.
  */
-inline IOStream& 
+inline IOStream&
 bin(IOStream& outs)
 {
   outs.m_base = IOStream::bin;
@@ -733,7 +754,7 @@ bin(IOStream& outs)
  * @param[in] outs stream.
  * @return iostream.
  */
-inline IOStream& 
+inline IOStream&
 oct(IOStream& outs)
 {
   outs.m_base = IOStream::oct;
@@ -745,7 +766,7 @@ oct(IOStream& outs)
  * @param[in] outs stream.
  * @return iostream.
  */
-inline IOStream& 
+inline IOStream&
 dec(IOStream& outs)
 {
   outs.m_base = IOStream::dec;
@@ -757,7 +778,7 @@ dec(IOStream& outs)
  * @param[in] outs stream to set base.
  * @return iostream.
  */
-inline IOStream& 
+inline IOStream&
 hex(IOStream& outs)
 {
   outs.m_base = IOStream::hex;
@@ -769,7 +790,7 @@ hex(IOStream& outs)
  * @param[in] outs stream.
  * @return iostream.
  */
-inline IOStream& 
+inline IOStream&
 tab(IOStream& outs)
 {
   outs.print('\t');
@@ -781,7 +802,7 @@ tab(IOStream& outs)
  * @param[in] outs stream.
  * @return iostream.
  */
-inline IOStream& 
+inline IOStream&
 endl(IOStream& outs)
 {
   outs.println();
@@ -793,7 +814,7 @@ endl(IOStream& outs)
  * @param[in] outs stream.
  * @return iostream.
  */
-inline IOStream& 
+inline IOStream&
 ends(IOStream& outs)
 {
   outs.print('\0');
@@ -805,7 +826,7 @@ ends(IOStream& outs)
  * @param[in] outs stream.
  * @return iostream.
  */
-inline IOStream& 
+inline IOStream&
 clear(IOStream& outs)
 {
   outs.print('\f');
@@ -817,10 +838,10 @@ clear(IOStream& outs)
  * @param[in] outs stream.
  * @return iostream.
  */
-inline IOStream& 
+inline IOStream&
 flush(IOStream& outs)
 {
-  outs.m_dev->flush();
+  if (outs.m_dev != NULL) outs.m_dev->flush();
   return (outs);
 }
 #endif

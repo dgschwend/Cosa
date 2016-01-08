@@ -3,18 +3,18 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2013, Mikael Patel
+ * Copyright (C) 2013-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * @section Description
  * Cosa demonstration of how to use that additional UARTs on the
  * Arduino Mega. The sketch allocates buffers and initiates usage of
@@ -31,12 +31,12 @@
 #endif
 #include "Cosa/Trace.hh"
 #include "Cosa/IOBuffer.hh"
-#include "Cosa/IOStream/Driver/UART.hh"
+#include "Cosa/UART.hh"
 #include "Cosa/Watchdog.hh"
 
 // Create buffer for UART1
-static IOBuffer<UART::BUFFER_MAX> ibuf;
-static IOBuffer<UART::BUFFER_MAX> obuf;
+static IOBuffer<UART::RX_BUFFER_MAX> ibuf;
+static IOBuffer<UART::TX_BUFFER_MAX> obuf;
 
 // Create UART1 and bind to the cout IOStream
 UART uart1(1, &ibuf, &obuf);

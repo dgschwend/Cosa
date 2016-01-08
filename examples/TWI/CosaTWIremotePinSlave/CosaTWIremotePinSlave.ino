@@ -3,25 +3,25 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2013-2014, Mikael Patel
+ * Copyright (C) 2013-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * @section Description
  * Cosa demonstration of a TWI master-slave; Remote Pin handling.
  * Read pins on slave (typically ATtiny84/85).
  *
  * @section Circuit
  * The Arduino analog pins 4 (SDA) and 5 (SCL) are used for I2C/TWI
- * connection. 
+ * connection.
  *
  * This file is part of the Arduino Che Cosa project.
  */
@@ -59,8 +59,8 @@ private:
 public:
   RemotePinSlave() : TWI::Slave(ADDR)
   {
-    set_write_buf(m_buf, sizeof(m_buf));
-    set_read_buf(m_buf, sizeof(m_buf));
+    write_buf(m_buf, sizeof(m_buf));
+    read_buf(m_buf, sizeof(m_buf));
   }
   virtual void on_request(void* buf, size_t size);
 };
@@ -75,7 +75,7 @@ RemotePinSlave::on_request(void* buf, size_t size)
     if (cmd.m_op == READ_OP)
       m_buf[0] = Pin::read((Board::DigitalPin) cmd.m_pin);
     else if (cmd.m_op == WRITE_OP) {
-      IOPin::set_mode((Board::DigitalPin) cmd.m_pin, IOPin::OUTPUT_MODE);
+      IOPin::mode((Board::DigitalPin) cmd.m_pin, IOPin::OUTPUT_MODE);
       OutputPin::write((Board::DigitalPin) cmd.m_pin, m_buf[1]);
     }
   }

@@ -3,18 +3,18 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2013-2014, Mikael Patel
+ * Copyright (C) 2013-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * This file is part of the Arduino Che Cosa project.
  */
 
@@ -25,16 +25,16 @@
 #include "Cosa/Power.hh"
 
 /**
- * Cosa Common Wireless device interface.
+ * Common Wireless device interface.
  */
 class Wireless {
 public:
   /**
-   * Cosa Common Wireless device driver interface.
+   * Common Wireless device driver interface.
    */
   class Driver {
   public:
-    /** 
+    /**
      * Network address together with port.
      */
     struct addr_t {
@@ -43,11 +43,11 @@ public:
 
       /**
        * Construct node address from given device and network
-       * address. 
+       * address.
        * @param[in] net network address.
        * @param[in] dev device address.
        */
-      addr_t(int16_t net, uint8_t dev) 
+      addr_t(int16_t net, uint8_t dev)
       {
 	network = net;
 	device = dev;
@@ -59,7 +59,7 @@ public:
 
     /**
      * Construct Wireless device driver with given network and device
-     * address. 
+     * address.
      * @param[in] network address.
      * @param[in] device address.
      */
@@ -70,29 +70,29 @@ public:
       m_dest(0)
     {}
 
-    /** 
+    /**
      * Get driver channel.
      * @return channel.
      */
-    uint8_t get_channel() const
+    uint8_t channel() const
     {
       return (m_channel);
     }
 
     /**
-     * Get driver network address. 
-     * @return network address. 
+     * Get driver network address.
+     * @return network address.
      */
-    int16_t get_network_address() const
+    int16_t network_address() const
     {
       return (m_addr.network);
     }
 
     /**
-     * Get driver device address. 
+     * Get driver device address.
      * @return device address.
      */
-    uint8_t get_device_address() const
+    uint8_t device_address() const
     {
       return (m_addr.device);
     }
@@ -103,7 +103,7 @@ public:
      * @param[in] net network address.
      * @param[in] dev device address.
      */
-    void set_address(int16_t net, uint8_t dev)
+    void address(int16_t net, uint8_t dev)
     {
       m_addr.network = net;
       m_addr.device = dev;
@@ -111,54 +111,54 @@ public:
 
     /**
      * Set device transmission channel. Should be used before calling
-     * begin(). 
+     * begin().
      * @param[in] channel.
      */
-    void set_channel(uint8_t channel)
+    void channel(uint8_t channel)
     {
       m_channel = channel;
     }
 
     /**
-     * @override Wireless::Driver
+     * @override{Wireless::Driver}
      * Start the Wireless device driver. Return true(1) if successful
-     * otherwise false(0).
-     * @param[in] config configuration vector (default NULL)
-     * @return bool
+     * otherwise false(0). Must be implemented by sub-class.
+     * @param[in] config configuration vector (default NULL).
+     * @return bool.
      */
     virtual bool begin(const void* config = NULL) = 0;
 
     /**
-     * @override Wireless::Driver
+     * @override{Wireless::Driver}
      * Shut down the device driver. Return true(1) if successful
      * otherwise false(0).
-     * @return bool
+     * @return bool.
      */
     virtual bool end()
     {
       return (true);
     }
-    
+
     /**
-     * @override Wireless::Driver
-     * Set device in power up mode. 
+     * @override{Wireless::Driver}
+     * Set device in power up mode.
      */
     virtual void powerup() {}
 
     /**
-     * @override Wireless::Driver
+     * @override{Wireless::Driver}
      * Set device in power down mode.
      */
     virtual void powerdown() {}
 
     /**
-     * @override Wireless::Driver
-     * Set device in wakeup on radio mode. 
+     * @override{Wireless::Driver}
+     * Set device in wakeup on radio mode.
      */
     virtual void wakeup_on_radio() {}
 
     /**
-     * @override Wireless::Driver
+     * @override{Wireless::Driver}
      * Return true(1) if a message is available otherwise false(0).
      * @return bool.
      */
@@ -168,23 +168,21 @@ public:
     }
 
     /**
-     * @override Wireless::Driver
+     * @override{Wireless::Driver}
      * Return true(1) if there is room to send on the device
-     * otherwise false(0).  
+     * otherwise false(0).
      * @return bool.
      */
     virtual bool room()
     {
       return (true);
     }
-  
+
     /**
-     * @override Wireless::Driver
+     * @override{Wireless::Driver}
      * Send message in given null terminated io vector. Returns number
-     * of bytes sent. Returns error code(-1) if number of bytes is
-     * greater than PAYLOAD_MAX. Return error code(-2) if fails to set
-     * transmit mode. Note that port numbers (128 and higher are
-     * reserved for system protocols).
+     * of bytes sent if successful otherwise a negative error code.
+     * Must be implemented by sub-class.
      * @param[in] dest destination network address.
      * @param[in] port device port (or message type).
      * @param[in] vec null termianted io vector.
@@ -193,12 +191,9 @@ public:
     virtual int send(uint8_t dest, uint8_t port, const iovec_t* vec) = 0;
 
     /**
-     * @override Wireless::Driver
+     * @override{Wireless::Driver}
      * Send message in given buffer, with given number of bytes. Returns
-     * number of bytes sent. Returns error code(-1) if number of bytes
-     * is greater than PAYLOAD_MAX. Return error code(-2) if fails to
-     * set transmit mode. Note that port numbers (128 and higher are
-     * reserved for system protocols).
+     * number of bytes sent if successful otherwise a negative error code.
      * @param[in] dest destination network address.
      * @param[in] port device port (or message type).
      * @param[in] buf buffer to transmit.
@@ -215,12 +210,9 @@ public:
     }
 
     /**
-     * @override Wireless::Driver
+     * @override{Wireless::Driver}
      * Broadcast message in given null terminated io vector. Returns
-     * number of bytes sent. Returns error code(-1) if number of bytes
-     * is greater than PAYLOAD_MAX. Return error code(-2) if fails to
-     * set transmit mode. Note that port numbers (128 and higher are
-     * reserved for system protocols).
+     * number of bytes sent if successful otherwise a negative error code.
      * @param[in] port device port (or message type).
      * @param[in] vec null termianted io vector.
      * @return number of bytes send or negative error code.
@@ -231,12 +223,10 @@ public:
     }
 
     /**
-     * @override Wireless::Driver
-     * Boardcast message in given buffer, with given number of bytes. 
-     * Returns number of bytes sent. Returns error code(-1) if number
-     * of bytes is greater than PAYLOAD_MAX. Return error code(-2) if
-     * fails to set transmit mode. Note that port numbers (128 and
-     * higher are reserved for system protocols).
+     * @override{Wireless::Driver}
+     * Boardcast message in given buffer, with given number of bytes.
+     * Returns number of bytes sent if successful otherwise a negative
+     * error code.
      * @param[in] port device port (or message type).
      * @param[in] buf buffer to transmit.
      * @param[in] len number of bytes in buffer.
@@ -248,14 +238,11 @@ public:
     }
 
     /**
-     * @override Wireless::Driver
+     * @override{Wireless::Driver}
      * Receive message and store into given buffer with given maximum
      * length. The source network address is returned in the parameter
-     * src. Returns error code(-2) if no message is available and/or a
-     * timeout occured. Returns error code(-1) if the buffer size if
-     * to small for incoming message or if the receiver fifo has 
-     * overflowed. Otherwise the actual number of received bytes is
-     * returned 
+     * src. Returns the number of received bytes or a negative error
+     * code. Must be implemented by sub-class.
      * @param[out] src source network address.
      * @param[out] port device port (or message type).
      * @param[in] buf buffer to store incoming message.
@@ -263,14 +250,14 @@ public:
      * @param[in] ms maximum time out period.
      * @return number of bytes received or negative error code.
      */
-    virtual int recv(uint8_t& src, uint8_t& port, 
-		     void* buf, size_t len, 
+    virtual int recv(uint8_t& src, uint8_t& port,
+		     void* buf, size_t len,
 		     uint32_t ms = 0L) = 0;
 
     /**
-     * @override Wireless::Driver
+     * @override{Wireless::Driver}
      * Return true(1) if the latest received message was a broadcast
-     * otherwise false(0). 
+     * otherwise false(0).
      */
     virtual bool is_broadcast()
     {
@@ -278,33 +265,35 @@ public:
     }
 
     /**
-     * @override Wireless::Driver
-     * Set output power level in dBm. Default no-operation.
+     * @override{Wireless::Driver}
+     * Set output power level in dBm.
      * @param[in] dBm.
      */
-    virtual void set_output_power_level(int8_t dBm) 
+    virtual void output_power_level(int8_t dBm)
     {
       UNUSED(dBm);
     }
 
     /**
-     * @override Wireless::Driver
+     * @override{Wireless::Driver}
      * Return estimated input power level (dBm). Default zero(0).
+     * @return power level in dBm.
      */
-    virtual int get_input_power_level() 
+    virtual int input_power_level()
     {
       return (0);
     }
 
     /**
-     * @override Wireless::Driver
+     * @override{Wireless::Driver}
      * Return link quality indicator. Default zero(0).
+     * @return quality indicator.
      */
-    virtual int get_link_quality_indicator()
+    virtual int link_quality_indicator()
     {
       return (0);
     }
-    
+
   protected:
     uint8_t m_channel;		//!< Current channel (device dependent.
     addr_t m_addr;		//!< Current network and device address.

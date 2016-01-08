@@ -3,18 +3,18 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2012-2014, Mikael Patel
+ * Copyright (C) 2012-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * @section Description
  * Cosa demonstration of pin abstractions.
  *
@@ -30,7 +30,7 @@
 #include "Cosa/ExternalInterrupt.hh"
 #include "Cosa/Watchdog.hh"
 #include "Cosa/Trace.hh"
-#include "Cosa/IOStream/Driver/UART.hh"
+#include "Cosa/UART.hh"
 #include "Cosa/Memory.h"
 
 // Counter Class
@@ -38,30 +38,30 @@ class Counter {
 private:
   volatile uint16_t m_counter;
 public:
-  Counter(uint16_t init = 0) : 
-    m_counter(init) 
+  Counter(uint16_t init = 0) :
+    m_counter(init)
   {}
-  uint16_t get_counter() 
-  { 
-    return (m_counter); 
+  uint16_t get_counter()
+  {
+    return (m_counter);
   }
-  void set_counter(uint16_t value) 
-  { 
-    m_counter = value; 
+  void set_counter(uint16_t value)
+  {
+    m_counter = value;
   }
-  void increment(uint16_t value) 
-  { 
-    m_counter += value; 
+  void increment(uint16_t value)
+  {
+    m_counter += value;
   }
 };
 
 // External Interrupt Pin Handler; count interrupts
 class ExtPin : public ExternalInterrupt, public Counter {
 private:
-  virtual void on_interrupt(uint16_t arg) 
-  { 
-    UNUSED(arg); 
-    increment(1); 
+  virtual void on_interrupt(uint16_t arg)
+  {
+    UNUSED(arg);
+    increment(1);
   }
 public:
   ExtPin(Board::ExternalInterruptPin pin) :
@@ -73,15 +73,15 @@ public:
 // Pin Change Interrupt Handler; count interrupts
 class IntPin : public PinChangeInterrupt, public Counter {
 private:
-  virtual void on_interrupt(uint16_t arg) 
-  { 
-    UNUSED(arg); 
-    increment(1); 
+  virtual void on_interrupt(uint16_t arg)
+  {
+    UNUSED(arg);
+    increment(1);
   }
 public:
-  IntPin(Board::InterruptPin pin) : 
-    PinChangeInterrupt(pin), 
-    Counter(0) 
+  IntPin(Board::InterruptPin pin) :
+    PinChangeInterrupt(pin),
+    Counter(0)
   {}
 };
 
@@ -117,6 +117,9 @@ void setup()
   TRACE(sizeof(PWMPin));
   TRACE(sizeof(Watchdog));
 
+  // Start the watchdog
+  Watchdog::begin();
+
   // Check interrupt pin; enable and print interrupt counter
   PinChangeInterrupt::begin();
   TRACE(int0Pin.get_counter());
@@ -128,20 +131,20 @@ void setup()
   TRACE(extPin.get_counter());
   extPin.enable();
 
-  // Start the watchdog ticks counter (1 second pulse)
-  Watchdog::begin(1024, Watchdog::push_watchdog_event);
+  // Power up ADC
+  AnalogPin::powerup();
 }
+
+Watchdog::Clock clock;
 
 void loop()
 {
-  // Wait for the next event. Allow a low power sleep
-  Event event;
-  Event::queue.await(&event);
-  TRACE(event.get_type());
+  // Wait for the next seconds tick
+  clock.await();
 
   // Print the time index
-  INFO("ticks = %d", Watchdog::ticks());
-  
+  INFO("ms = %ul", Watchdog::millis());
+
   // Sample the level
   uint16_t value = levelPin.sample();
   INFO("levelPin = %d", value);
@@ -149,7 +152,7 @@ void loop()
   // Check if the led should be on and the pwm level updated
   if (onoffPin.is_set()) {
     ledPin.set(value, 0, 1023);
-    INFO("duty = %d", ledPin.get_duty());
+    INFO("duty = %d", ledPin.duty());
 
     // Print the interrupt counters
     TRACE(extPin.get_counter());

@@ -9,12 +9,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * This file is part of the Arduino Che Cosa project.
  */
 
@@ -35,11 +35,11 @@
  * number/digit will not work, symbols must be used, Board::D2.
  *
  * The static inline functions, SFR, BIT and UART, rely on compiler
- * optimizations to be reduced. 
+ * optimizations to be reduced.
  *
  * @section Circuit
  * @code
- *                       ATinyX4   
+ *                       ATinyX4
  *                     +----U----+
  * (VCC)-------------1-|VCC   GND|-14------------(GND)
  * (D8)--------------2-|PB0   PA0|-13----------(D0/A0)
@@ -53,6 +53,7 @@
  */
 class Board {
   friend class Pin;
+  friend class GPIO;
 private:
   /**
    * Do not allow instances. This is a static singleton; name space.
@@ -66,22 +67,20 @@ private:
    */
   static volatile uint8_t* SFR(uint8_t pin)
     __attribute__((always_inline))
-  { 
-    return (pin < 8 ? &PINA : 
-	              &PINB);
+  {
+    return (pin < 8 ? &PINA : &PINB);
   }
 
   /**
    * Return bit position for given Arduino pin number in Special
-   * Function Register. 
+   * Function Register.
    * @param[in] pin number.
    * @return pin bit position.
    */
   static uint8_t BIT(uint8_t pin)
     __attribute__((always_inline))
   {
-    return (pin < 8 ? pin : 
-	              pin - 8);
+    return (pin < 8 ? pin : pin - 8);
   }
 
   /**
@@ -91,9 +90,8 @@ private:
    */
   static volatile uint8_t* PCIMR(uint8_t pin)
     __attribute__((always_inline))
-  { 
-    return (pin < 8 ? &PCMSK0 : 
-	              &PCMSK1);
+  {
+    return (pin < 8 ? &PCMSK0 : &PCMSK1);
   }
 
   /**
@@ -102,10 +100,10 @@ private:
    */
   static volatile uint8_t* USI()
     __attribute__((always_inline))
-  { 
+  {
     return (&PINA);
   }
-  
+
 public:
   /**
    * Initiate board ports. Default void.
@@ -154,7 +152,7 @@ public:
   } __attribute__((packed));
 
   /**
-   * PWM pin symbols; sub-set of digital pins to allow compile 
+   * PWM pin symbols; sub-set of digital pins to allow compile
    * time checking
    */
   enum PWMPin {
@@ -165,7 +163,7 @@ public:
   } __attribute__((packed));
 
   /**
-   * External interrupt pin symbols; sub-set of digital pins 
+   * External interrupt pin symbols; sub-set of digital pins
    * to allow compile time checking.
    */
   enum ExternalInterruptPin {
@@ -189,7 +187,7 @@ public:
     PCI10 = D10			// PB2
   } __attribute__((packed));
 
-  /** 
+  /**
    * Size of pin maps.
    */
   enum {
@@ -207,7 +205,7 @@ public:
     SDA = 6,			// PA6/D6
     SCL = 4			// PA4/D4
   } __attribute__((packed));
-  
+
   /**
    * Pins used for SPI interface (in Port A, bit 3-6, D3-D5)
    */
@@ -255,6 +253,7 @@ extern "C" {
   void TIMER1_COMPA_vect(void) __attribute__ ((signal));
   void TIMER1_COMPB_vect(void) __attribute__ ((signal));
   void TIMER1_OVF_vect(void) __attribute__ ((signal));
+  void TIMER1_CAPT_vect(void)  __attribute__ ((signal));
   void WDT_vect(void) __attribute__ ((signal));
   void USI_START_vect(void) __attribute__ ((signal));
   void USI_OVF_vect(void) __attribute__ ((signal));

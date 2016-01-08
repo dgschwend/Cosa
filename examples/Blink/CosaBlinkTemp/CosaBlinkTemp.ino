@@ -3,24 +3,24 @@
  * @version 1.0
  *
  * @section License
- * Copyright (C) 2014, Mikael Patel
+ * Copyright (C) 2014-2015, Mikael Patel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * @section Description
  * Cosa LED blink demonstation. Blink RGB LED according to temperature
- * from 1-wire digital thermometer (DS18B20); RED if above 30 C, 
+ * from 1-wire digital thermometer (DS18B20); RED if above 30 C,
  * BLUE if below 25 C otherwise GREEN. Demonstrates powerdown to
  * less than 10 uA while idle (and no LED on).
- * 
+ *
  *                       DS18B20/sensor
  * (D3)---[4K7]--+       +------------+
  * (GND)---------)-----1-|GND         |\
@@ -37,9 +37,11 @@
  * This file is part of the Arduino Che Cosa project.
  */
 
+#include <OWI.h>
+#include <DS18B20.h>
+
 #include "Cosa/Watchdog.hh"
 #include "Cosa/OutputPin.hh"
-#include "Cosa/OWI/Driver/DS18B20.hh"
 
 // RGB LED pins
 #if !defined(BOARD_ATTINY)
@@ -76,7 +78,7 @@ void setup()
   // Connect to temperature sensor, and set resolution and triggers
   pw.on();
   sensor.connect(0);
-  sensor.set_resolution(10);
+  sensor.resolution(10);
   sensor.set_trigger(25,30);
   sensor.write_scratchpad();
   pw.off();
@@ -90,7 +92,7 @@ void loop()
   sensor.read_scratchpad();
   pw.off();
   int8_t low, high;
-  int16_t temp = (sensor.get_temperature() >> 4);
+  int16_t temp = (sensor.temperature() >> 4);
   sensor.get_trigger(low, high);
 
   // Set LED according to temperature
